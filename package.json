@@ -9,9 +9,18 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
+    "@hookform/resolvers": "^5.9.1",
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
+    "lucide-react": "^1.35.0",
+    "nanoid": "^6.0.1",
     "next": "16.3.3",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-hook-form": "^7.86.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.5.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

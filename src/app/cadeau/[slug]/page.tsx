@@ -1,0 +1,87 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Logo } from "@/components/logo";
+import { getPublicGift } from "@/lib/songs";
+import { isSupabaseConfigured } from "@/lib/env";
+
+type Props = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  if (!isSupabaseConfigured) return { title: "Cadeau" };
+  const { slug } = await params;
+  const gift = await getPublicGift(slug);
+  if (!gift) return { title: "Cadeau introuvable" };
+
+  const title = `Une chanson pour ${gift.song.recipient_name ?? "toi"}`;
+  return {
+    title,
+    description: `${gift.song.occasion ?? "Un moment spécial"} — une chanson personnalisée créée avec Melodya.`,
+    openGraph: {
+      title,
+      images: gift.cover ? [gift.cover] : [`/api/cover/${gift.song.id}`],
+    },
+    robots: { index: false },
+  };
+}
+
+export default async function GiftPage({ params }: Props) {
+  if (!isSupabaseConfigured) notFound();
+  const { slug } = await params;
+  const gift = await getPublicGift(slug);
+  if (!gift) notFound();
+
+  const { song, version } = gift;
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-plum text-cream">
+      <header className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 py-6">
+        <Logo className="text-cream" />
+      </header>
+
+      <main className="mx-auto w-full max-w-xl flex-1 px-5 py-8 text-center">
+        <p className="text-sm font-semibold uppercase tracking-widest text-gold">
+          {song.occasion ?? "Pour toi"}
+        </p>
+        <h1 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">
+          {song.recipient_name ?? "Cette chanson"},<br /> cette chanson est pour toi
+        </h1>
+        {song.sender_name && (
+          <p className="mt-4 text-cream/70">De la part de {song.sender_name}</p>
+        )}
+
+        <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+          {gift.cover && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={gift.cover}
+              alt=""
+              className="mx-auto mb-5 aspect-[1200/630] w-full rounded-2xl object-cover"
+            />
+          )}
+          {version ? (
+            <audio controls preload="none" src={version.audio_url} className="w-full">
+              <track kind="captions" />
+            </audio>
+          ) : (
+            <p className="text-sm text-cream/70">La chanson sera bientôt disponible.</p>
+          )}
+        </div>
+
+        {song.lyrics && (
+          <pre className="mt-8 whitespace-pre-wrap text-left font-sans text-sm leading-relaxed text-cream/80">
+            {song.lyrics}
+          </pre>
+        )}
+
+        <div className="mt-12 border-t border-white/10 pt-6 text-sm text-cream/60">
+          Créée avec{" "}
+          <Link href="/" className="font-semibold text-gold">
+            Melodya
+          </Link>{" "}
+          — ta chanson personnalisée par IA.
+        </div>
+      </main>
+    </div>
+  );
+}
