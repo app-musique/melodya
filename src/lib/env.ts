@@ -9,11 +9,17 @@
 const clean = (v: string | undefined): string | undefined =>
   v && v.trim() !== "" ? v.trim() : undefined;
 
+// URL absolue du site : variable explicite, sinon domaine de prod Vercel, sinon local.
+const vercelProd = clean(process.env.VERCEL_PROJECT_PRODUCTION_URL);
+const resolvedSiteUrl =
+  clean(process.env.NEXT_PUBLIC_SITE_URL) ??
+  (vercelProd ? `https://${vercelProd}` : "http://localhost:3000");
+
 export const env = {
   // Publiques (disponibles côté navigateur)
   supabaseUrl: clean(process.env.NEXT_PUBLIC_SUPABASE_URL),
   supabaseAnonKey: clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-  siteUrl: clean(process.env.NEXT_PUBLIC_SITE_URL) ?? "http://localhost:3000",
+  siteUrl: resolvedSiteUrl,
 
   // Serveur uniquement
   supabaseServiceRoleKey: clean(process.env.SUPABASE_SERVICE_ROLE_KEY),
