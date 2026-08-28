@@ -1,42 +1,41 @@
 /**
  * Accès centralisé aux variables d'environnement + détection des modes « mock ».
- * Toute intégration externe (paroles, musique, paiement) bascule automatiquement
- * en simulation quand la clé correspondante est absente.
+ *
+ * Important : chaque variable est lue par un accès statique `process.env.NOM`
+ * (et non `process.env[nom]`) — c'est la seule forme que le bundler Next.js
+ * sait remplacer côté navigateur pour les variables `NEXT_PUBLIC_*`.
  */
 
-function optional(name: string): string | undefined {
-  const v = process.env[name];
-  return v && v.trim() !== "" ? v.trim() : undefined;
-}
+const clean = (v: string | undefined): string | undefined =>
+  v && v.trim() !== "" ? v.trim() : undefined;
 
-function required(name: string): string {
-  const v = optional(name);
-  if (!v) {
+export const env = {
+  // Publiques (disponibles côté navigateur)
+  supabaseUrl: clean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+  supabaseAnonKey: clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+  siteUrl: clean(process.env.NEXT_PUBLIC_SITE_URL) ?? "http://localhost:3000",
+
+  // Serveur uniquement
+  supabaseServiceRoleKey: clean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+  anthropicApiKey: clean(process.env.ANTHROPIC_API_KEY),
+
+  musicProvider: (clean(process.env.MUSIC_PROVIDER) ?? "mock").toLowerCase(),
+  sunoApiBaseUrl: clean(process.env.SUNO_API_BASE_URL),
+  sunoApiKey: clean(process.env.SUNO_API_KEY),
+
+  monerooSecretKey: clean(process.env.MONEROO_SECRET_KEY),
+  monerooWebhookSecret: clean(process.env.MONEROO_WEBHOOK_SECRET),
+};
+
+export function requireEnv(name: keyof typeof env): string {
+  const v = env[name];
+  if (typeof v !== "string" || v === "") {
     throw new Error(
       `Variable d'environnement manquante : ${name}. Copie .env.example vers .env.local et renseigne-la.`,
     );
   }
   return v;
 }
-
-export const env = {
-  supabaseUrl: optional("NEXT_PUBLIC_SUPABASE_URL"),
-  supabaseAnonKey: optional("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-  supabaseServiceRoleKey: optional("SUPABASE_SERVICE_ROLE_KEY"),
-
-  siteUrl: optional("NEXT_PUBLIC_SITE_URL") ?? "http://localhost:3000",
-
-  anthropicApiKey: optional("ANTHROPIC_API_KEY"),
-
-  musicProvider: (optional("MUSIC_PROVIDER") ?? "mock").toLowerCase(),
-  sunoApiBaseUrl: optional("SUNO_API_BASE_URL"),
-  sunoApiKey: optional("SUNO_API_KEY"),
-
-  monerooSecretKey: optional("MONEROO_SECRET_KEY"),
-  monerooWebhookSecret: optional("MONEROO_WEBHOOK_SECRET"),
-};
-
-export const requireEnv = { required };
 
 export const isSupabaseConfigured =
   !!env.supabaseUrl && !!env.supabaseAnonKey && !!env.supabaseServiceRoleKey;
