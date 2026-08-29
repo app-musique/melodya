@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app/app-shell";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/credits";
-import { unreadCount } from "@/lib/notifications";
+import { syncOccasionNotifications, unreadCount } from "@/lib/notifications";
 import { isSupabaseConfigured } from "@/lib/env";
 import type { Profile } from "@/lib/domain";
 
@@ -12,6 +12,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!isSupabaseConfigured) redirect("/connexion");
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
+
+  // Génère les rappels d'occasions AVANT de compter les non-lues (badge à jour).
+  await syncOccasionNotifications(user.id).catch(() => {});
 
   const [profileData, unread] = await Promise.all([
     getCurrentProfile(),

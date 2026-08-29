@@ -7,7 +7,6 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { getBalance, getCurrentProfile } from "@/lib/credits";
 import { listSongs } from "@/lib/songs";
 import { upcomingOccasions } from "@/lib/occasions";
-import { syncOccasionNotifications } from "@/lib/notifications";
 
 export const metadata: Metadata = { title: "Accueil", robots: { index: false } };
 
@@ -21,8 +20,6 @@ function greeting() {
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
-
-  await syncOccasionNotifications(user.id).catch(() => {});
 
   const [profile, balance, songs, occasions] = await Promise.all([
     getCurrentProfile(),
