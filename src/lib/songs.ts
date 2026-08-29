@@ -6,7 +6,8 @@ import { getMusicProvider } from "@/lib/music";
 import { generateLyrics } from "@/lib/lyrics";
 import { CURRENCY } from "@/lib/pricing";
 import { getCreditsPerSong, spendCreditForSong } from "@/lib/credits";
-import type { Song, SongVersion, SongAsset } from "@/lib/domain";
+import { notify } from "@/lib/notifications";
+import type { GiftReaction, Song, SongVersion, SongAsset } from "@/lib/domain";
 import { env } from "@/lib/env";
 
 // ------------------------------------------------------------------
@@ -60,18 +61,25 @@ export async function getSongBundle(id: string): Promise<{
   song: Song;
   versions: SongVersion[];
   assets: SongAsset[];
+  reactions: GiftReaction[];
 } | null> {
   const supabase = await createServerClient();
   const { data: song } = await supabase.from("songs").select("*").eq("id", id).maybeSingle();
   if (!song) return null;
-  const [{ data: versions }, { data: assets }] = await Promise.all([
+  const [{ data: versions }, { data: assets }, { data: reactions }] = await Promise.all([
     supabase.from("song_versions").select("*").eq("song_id", id).order("idx"),
     supabase.from("song_assets").select("*").eq("song_id", id),
+    supabase
+      .from("gift_reactions")
+      .select("*")
+      .eq("song_id", id)
+      .order("created_at", { ascending: false }),
   ]);
   return {
     song: song as Song,
     versions: (versions as SongVersion[]) ?? [],
     assets: (assets as SongAsset[]) ?? [],
+    reactions: (reactions as GiftReaction[]) ?? [],
   };
 }
 
@@ -257,6 +265,13 @@ export async function advanceGeneration(songId: string): Promise<Song> {
       .eq("id", songId)
       .select("*")
       .single();
+    await notify(song.user_id, {
+      type: "song_failed",
+      title: "La création de ta chanson a échoué",
+      body: "Ouvre la chanson pour la relancer — aucun crédit n'est reperdu.",
+      link: `/mes-chansons/${songId}`,
+      dedupeKey: `song_failed:${songId}`,
+    });
     return failed as Song;
   }
 
@@ -295,6 +310,14 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     url: `${env.siteUrl}/api/cover/${songId}`,
   });
 
+  await notify((claimed as Song).user_id, {
+    type: "song_ready",
+    title: "Ta chanson est prête 🎉",
+    body: `${(claimed as Song).recipient_name ?? "Ta chanson"} — écoute les 3 versions et choisis ta préférée.`,
+    link: `/mes-chansons/${songId}`,
+    dedupeKey: `song_ready:${songId}`,
+  });
+
   return claimed as Song;
 }
 
@@ -303,6 +326,7 @@ export async function getPublicGift(slug: string): Promise<{
   song: Song;
   version: SongVersion | null;
   cover: string | null;
+  reactions: GiftReaction[];
 } | null> {
   const admin = createAdminClient();
   const { data: song } = await admin
@@ -314,7 +338,7 @@ export async function getPublicGift(slug: string): Promise<{
   if (!song) return null;
 
   const s = song as Song;
-  const [{ data: version }, { data: cover }] = await Promise.all([
+  const [{ data: version }, { data: cover }, { data: reactions }] = await Promise.all([
     admin
       .from("song_versions")
       .select("*")
@@ -322,11 +346,32 @@ export async function getPublicGift(slug: string): Promise<{
       .eq("is_selected", true)
       .maybeSingle(),
     admin.from("song_assets").select("url").eq("song_id", s.id).eq("type", "cover").maybeSingle(),
+    admin
+      .from("gift_reactions")
+      .select("*")
+      .eq("song_id", s.id)
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
 
   return {
     song: s,
     version: (version as SongVersion) ?? null,
     cover: (cover as { url: string } | null)?.url ?? null,
+    reactions: (reactions as GiftReaction[]) ?? [],
   };
+}
+
+/** Enregistre une ouverture de la page cadeau + notifie le propriétaire (throttle appelant). */
+export async function registerGiftView(songId: string, ownerId: string, recipient: string | null) {
+  const admin = createAdminClient();
+  await admin.rpc("increment_song_counter", { p_song: songId, p_field: "gift_view_count" });
+  const day = new Date().toISOString().slice(0, 10);
+  await notify(ownerId, {
+    type: "gift_viewed",
+    title: `${recipient ?? "Quelqu'un"} a ouvert ton cadeau`,
+    body: "Ta page cadeau vient d'être consultée.",
+    link: `/mes-chansons/${songId}`,
+    dedupeKey: `gift_viewed:${songId}:${day}`,
+  });
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  CalendarHeart,
   Clapperboard,
   Coins,
   Compass,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { AccountNav } from "@/components/account-nav";
+import { NotificationsBell } from "@/components/app/notifications-bell";
 import type { Profile } from "@/lib/domain";
 
 type NavItem = {
@@ -32,8 +34,9 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/tableau-de-bord", label: "Accueil", icon: Home },
   { href: "/commander", label: "Créer", icon: Sparkles },
+  { href: "/explorer", label: "Explorer", icon: Compass },
   { href: "/mes-chansons", label: "Mes chansons", icon: Music4 },
-  { href: "/explorer", label: "Explorer", icon: Compass, soon: true },
+  { href: "/occasions", label: "Occasions", icon: CalendarHeart },
   { href: "/studio", label: "Studio clip", icon: Clapperboard, soon: true },
   { href: "/profil", label: "Profil", icon: UserRound },
 ];
@@ -41,10 +44,12 @@ const NAV: NavItem[] = [
 export function AppShell({
   profile,
   email,
+  unread,
   children,
 }: {
   profile: Profile;
   email: string;
+  unread: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -208,6 +213,7 @@ export function AppShell({
               </span>
               <Plus className="size-3.5 text-brand-strong" />
             </Link>
+            <NotificationsBell initialUnread={unread} />
             <AccountNav email={email} />
           </div>
         </header>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Logo } from "@/components/logo";
+import { GiftReactions } from "@/components/gift/gift-reactions";
+import { GiftViewTracker } from "@/components/gift/gift-view-tracker";
 import { getPublicGift } from "@/lib/songs";
 import { isSupabaseConfigured } from "@/lib/env";
 
@@ -35,6 +37,7 @@ export default async function GiftPage({ params }: Props) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-plum text-cream">
+      <GiftViewTracker slug={slug} />
       <header className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 py-6">
         <Logo className="text-cream" />
       </header>
@@ -73,6 +76,8 @@ export default async function GiftPage({ params }: Props) {
             {song.lyrics}
           </pre>
         )}
+
+        <GiftReactions slug={slug} initial={gift.reactions} />
 
         <div className="mt-12 border-t border-white/10 pt-6 text-sm text-cream/60">
           Créée avec{" "}

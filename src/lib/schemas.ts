@@ -81,3 +81,28 @@ export const adminSettingsSchema = z.object({
   credits_per_song: z.number().int().min(1).max(50),
   signup_bonus_credits: z.number().int().min(0).max(100),
 });
+
+export const adminSongShowcaseSchema = z.object({
+  is_showcase: z.boolean().optional(),
+  showcase_title: z.string().trim().max(80).optional(),
+  showcase_artist: z.string().trim().max(80).optional(),
+});
+
+// --- Occasions ---
+
+export const occasionSchema = z.object({
+  label: z.string().trim().min(2, "Donne un intitulé").max(80),
+  person_name: z.string().trim().max(80).optional().default(""),
+  relationship: z.string().trim().max(80).optional().default(""),
+  event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide"),
+  is_recurring: z.boolean().default(true),
+  notify_days_before: z.number().int().min(0).max(90).default(7),
+});
+
+// --- Réactions cadeau ---
+
+export const reactionSchema = z.object({
+  emoji: z.string().trim().min(1).max(8),
+  message: z.string().trim().max(280).optional(),
+  authorName: z.string().trim().max(60).optional(),
+});
