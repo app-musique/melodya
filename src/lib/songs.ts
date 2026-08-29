@@ -9,6 +9,7 @@ import { getCreditsPerSong, grantCredits, spendCreditForSong } from "@/lib/credi
 import { notify } from "@/lib/notifications";
 import { sendSongReadyEmail } from "@/lib/email";
 import { persistAudio } from "@/lib/media";
+import { logError } from "@/lib/errors";
 import type { GiftReaction, Song, SongVersion, SongAsset } from "@/lib/domain";
 import { env } from "@/lib/env";
 
@@ -228,6 +229,7 @@ export async function startGeneration(songId: string): Promise<void> {
   } catch (err) {
     // Échec avant même la création du job : on rembourse le crédit Melodya
     // (le fournisseur n'a rien produit) et on renvoie la chanson en brouillon.
+    await logError("startGeneration", err, { songId });
     await grantCredits(song.user_id, song.credits_cost || 1, "refund");
     await admin
       .from("songs")
@@ -254,12 +256,23 @@ export async function advanceGeneration(songId: string): Promise<Song> {
   if (song.generation_started_at) {
     const elapsed = Date.now() - new Date(song.generation_started_at).getTime();
     if (elapsed > 10 * 60 * 1000) {
+      await logError("advanceGeneration.timeout", new Error("Délai de génération dépassé"), {
+        songId,
+        provider_job_id: song.provider_job_id,
+      });
       const { data: failed } = await admin
         .from("songs")
         .update({ status: "failed", error: "Délai de génération dépassé" })
         .eq("id", songId)
         .select("*")
         .single();
+      await notify(song.user_id, {
+        type: "song_failed",
+        title: "La création de ta chanson a échoué",
+        body: "Ouvre la chanson pour la relancer — aucun crédit n'est reperdu.",
+        link: `/mes-chansons/${songId}`,
+        dedupeKey: `song_failed:${songId}`,
+      });
       return failed as Song;
     }
   }
@@ -270,6 +283,10 @@ export async function advanceGeneration(songId: string): Promise<Song> {
   if (result.status === "pending") return song;
 
   if (result.status === "failed") {
+    await logError("advanceGeneration.failed", new Error(result.error), {
+      songId,
+      provider_job_id: song.provider_job_id,
+    });
     const { data: failed } = await admin
       .from("songs")
       .update({ status: "failed", error: result.error })
@@ -302,24 +319,21 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     return current as Song;
   }
 
+  // Insertion RAPIDE : on stocke les URLs fournisseur brutes (jouables tout de
+  // suite, valides ~15 j chez Suno). Le ré-hébergement Storage + les timings de
+  // paroles se font ensuite en tâche de fond via syncSongAssets().
   const tracks = result.tracks.slice(0, 4);
-
-  // Re-héberge l'audio (les URLs des fournisseurs expirent).
-  const persisted = await Promise.all(
-    tracks.map(async (t, i) => ({
-      ...t,
-      url: await persistAudio(songId, i + 1, t.url),
-    })),
-  );
 
   await admin.from("song_versions").delete().eq("song_id", songId);
   await admin.from("song_versions").insert(
-    persisted.map((t, i) => ({
+    tracks.map((t, i) => ({
       song_id: songId,
       idx: i + 1,
       audio_url: t.url,
       duration_sec: t.durationSec,
       is_selected: i === 0,
+      provider_audio_id: t.providerAudioId ?? null,
+      persisted_at: null,
     })),
   );
 
@@ -330,24 +344,7 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     url: `${env.siteUrl}/api/cover/${songId}`,
   });
 
-  // Timings de paroles réels si le fournisseur les expose.
-  const provider2 = getMusicProvider();
-  const firstAudioId = tracks[0]?.providerAudioId;
-  const lyricsText = (claimed as Song).lyrics;
-  if (provider2.getLineTimings && firstAudioId && lyricsText && song.provider_job_id) {
-    try {
-      const timings = await provider2.getLineTimings(
-        song.provider_job_id,
-        firstAudioId,
-        lyricsText,
-      );
-      if (timings && timings.length) {
-        await admin.from("songs").update({ lyrics_timing: timings }).eq("id", songId);
-      }
-    } catch {
-      // tant pis, fallback réparti côté client
-    }
-  }
+  await admin.from("songs").update({ assets_synced_at: null }).eq("id", songId);
 
   const createdNotif = await notify((claimed as Song).user_id, {
     type: "song_ready",
@@ -363,7 +360,96 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     }).catch(() => {});
   }
 
+  // Récompense de parrainage (idempotente) — une chanson réellement livrée.
+  try {
+    const { error } = await admin.rpc("grant_referral_reward", {
+      p_referee: (claimed as Song).user_id,
+    });
+    if (error) await logError("grant_referral_reward", error, { songId });
+  } catch (e) {
+    await logError("grant_referral_reward", e, { songId });
+  }
+
   return claimed as Song;
+}
+
+const onOurStorage = (url: string) =>
+  url.startsWith(env.siteUrl) || url.includes("/storage/v1/object/");
+
+/**
+ * Ré-héberge les audios (URL fournisseur → Supabase Storage) et récupère les
+ * timings de paroles. Idempotent, « draine » ce qui reste. Appelé en tâche de
+ * fond : after() du polling, webhook Suno, cron, chargement de /mes-chansons.
+ */
+export async function syncSongAssets(songId: string): Promise<void> {
+  const admin = createAdminClient();
+  try {
+    const { data } = await admin.from("songs").select("*").eq("id", songId).maybeSingle();
+    if (!data) return;
+    const song = data as Song;
+    if (song.status !== "ready" || song.assets_synced_at) return;
+
+    const { data: vData } = await admin
+      .from("song_versions")
+      .select("*")
+      .eq("song_id", songId)
+      .order("idx");
+    const versions = (vData as SongVersion[]) ?? [];
+    if (!versions.length) return;
+
+    // 1. ré-héberge chaque version pas encore persistée
+    for (const v of versions) {
+      if (v.persisted_at) continue;
+      const newUrl = await persistAudio(songId, v.idx, v.audio_url);
+      if (onOurStorage(newUrl)) {
+        await admin
+          .from("song_versions")
+          .update({ audio_url: newUrl, persisted_at: new Date().toISOString() })
+          .eq("id", v.id);
+      } else if (newUrl !== v.audio_url) {
+        await admin.from("song_versions").update({ audio_url: newUrl }).eq("id", v.id);
+      }
+    }
+
+    const { data: after2 } = await admin
+      .from("song_versions")
+      .select("persisted_at, provider_audio_id")
+      .eq("song_id", songId)
+      .order("idx");
+    const allPersisted = ((after2 as SongVersion[]) ?? []).every((r) => r.persisted_at);
+
+    // 2. timings de paroles réels (best-effort) quand l'audio est finalisé
+    const provider = getMusicProvider();
+    let hasTimings = !!song.lyrics_timing;
+    if (allPersisted && !hasTimings && provider.getLineTimings && song.provider_job_id && song.lyrics) {
+      const audioId = (after2 as SongVersion[])?.[0]?.provider_audio_id;
+      if (audioId) {
+        try {
+          const timings = await provider.getLineTimings(song.provider_job_id, audioId, song.lyrics);
+          if (timings && timings.length) {
+            await admin.from("songs").update({ lyrics_timing: timings }).eq("id", songId);
+            hasTimings = true;
+          }
+        } catch (e) {
+          await logError("getLineTimings", e, { songId });
+        }
+      }
+    }
+
+    // 3. terminé — quand tout est ré-hébergé et (timings OK ou fournisseur muet ou trop vieux).
+    // Garde-fou : au-delà de 15 min on clôt quand même (l'audio reste jouable sur
+    // l'URL fournisseur ~15 j ; chaque échec a été journalisé).
+    const ageMin = (Date.now() - new Date(song.created_at).getTime()) / 60000;
+    const timingSettled = hasTimings || !provider.getLineTimings || ageMin > 8;
+    if ((allPersisted && timingSettled) || ageMin > 15) {
+      await admin
+        .from("songs")
+        .update({ assets_synced_at: new Date().toISOString() })
+        .eq("id", songId);
+    }
+  } catch (err) {
+    await logError("syncSongAssets", err, { songId });
+  }
 }
 
 /** Lecture publique pour la page cadeau (bypass RLS, filtré). */

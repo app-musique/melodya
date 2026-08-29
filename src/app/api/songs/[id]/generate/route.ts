@@ -2,6 +2,8 @@ import { apiError, json, requireUser } from "@/lib/api";
 import { getOwnedSong, startGeneration } from "@/lib/songs";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export const maxDuration = 60;
+
 type Params = { params: Promise<{ id: string }> };
 
 /** Relance une génération après un échec. */

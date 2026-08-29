@@ -89,6 +89,7 @@ export type Song = {
   inspire_count: number;
   lyrics_timing: LyricsTiming | null;
   clip_dedication: string | null;
+  assets_synced_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -103,6 +104,8 @@ export type SongVersion = {
   audio_url: string;
   duration_sec: number | null;
   is_selected: boolean;
+  provider_audio_id: string | null;
+  persisted_at: string | null;
   created_at: string;
 };
 
@@ -209,6 +212,14 @@ export type GiftReaction = {
 };
 
 export const REACTION_EMOJIS = ["❤️", "🥹", "🎉", "🙏", "🔥", "✨"];
+
+export type AppError = {
+  id: string;
+  context: string;
+  message: string;
+  detail: string | null;
+  created_at: string;
+};
 
 export const STATUS_LABEL: Record<SongStatus, string> = {
   draft: "Brouillon",

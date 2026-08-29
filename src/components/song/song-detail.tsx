@@ -29,7 +29,12 @@ type Bundle = {
 export function SongDetail({ initial }: { initial: Bundle }) {
   const [bundle, setBundle] = useState<Bundle>(initial);
   const { song, versions } = bundle;
-  const polling = song.status === "generating" || song.status === "paid";
+  // On poll pendant la génération, puis un court instant après « prête » tant que
+  // le ré-hébergement audio / les timings ne sont pas finalisés (assets_synced_at).
+  const polling =
+    song.status === "generating" ||
+    song.status === "paid" ||
+    (song.status === "ready" && !song.assets_synced_at);
 
   const poll = useCallback(async () => {
     const res = await fetch(`/api/songs/${song.id}/status`);

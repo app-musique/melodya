@@ -33,6 +33,8 @@ export const env = {
   monerooWebhookSecret: clean(process.env.MONEROO_WEBHOOK_SECRET),
 
   resendApiKey: clean(process.env.RESEND_API_KEY),
+
+  cronSecret: clean(process.env.CRON_SECRET),
 };
 
 export function requireEnv(name: keyof typeof env): string {

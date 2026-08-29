@@ -41,6 +41,19 @@ const FAILED = new Set([
 
 type SunoClip = { id?: string; audioUrl?: string; streamAudioUrl?: string; duration?: number };
 
+/** Solde de crédits sunoapi.org (null si non configuré / injoignable). */
+export async function getSunoCredits(): Promise<number | null> {
+  if (!env.sunoApiKey || !env.sunoApiBaseUrl) return null;
+  try {
+    const res = await fetch(base("/api/v1/generate/credit"), { headers: headers() });
+    const json = (await res.json().catch(() => ({}))) as { code?: number; data?: number };
+    if (!res.ok || typeof json.data !== "number") return null;
+    return json.data;
+  } catch {
+    return null;
+  }
+}
+
 export const sunoMusicProvider: MusicProvider = {
   name: "suno",
 

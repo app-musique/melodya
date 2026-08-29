@@ -7,6 +7,7 @@ import {
   isMockPayments,
   isSupabaseConfigured,
 } from "@/lib/env";
+import { getSunoCredits } from "@/lib/music/suno";
 
 /**
  * Diagnostic public (aucune valeur sensible) : dit quelles intégrations sont
@@ -20,9 +21,11 @@ export async function GET() {
     musicProvider: env.musicProvider,
     sunoBaseUrlSet: !!env.sunoApiBaseUrl,
     sunoKeySet: !!env.sunoApiKey,
+    sunoBalance: isMockMusic ? null : await getSunoCredits(),
     lyrics: isMockLyrics ? "template" : "claude",
     payments: isMockPayments ? "mock" : "moneroo",
     email: isMockEmail ? "mock" : "resend",
+    cronSecretSet: !!env.cronSecret,
     siteUrl: env.siteUrl,
   });
 }
