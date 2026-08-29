@@ -8,35 +8,43 @@ import {
   welcomeTpl,
 } from "@/lib/email-templates";
 
-const FROM = process.env.EMAIL_FROM?.trim() || "Melodya <onboarding@resend.dev>";
-const REPLY_TO = process.env.EMAIL_REPLY_TO?.trim() || undefined;
-
 type Mail = { subject: string; html: string; text: string };
 
-/** Envoi bas niveau — no-op + log en mode simulé, erreurs avalées. */
+const DEFAULT_FROM = "Melodya <muzikii2026@gmail.com>";
+
+/** `Nom <email@x>` ou `email@x` → { name?, email }. */
+function parseSender(raw: string | undefined): { name?: string; email: string } {
+  const s = (raw ?? DEFAULT_FROM).trim();
+  const m = s.match(/^(.*?)\s*<\s*([^>]+)\s*>$/);
+  if (m) return { name: m[1] || undefined, email: m[2].trim() };
+  return { email: s };
+}
+
+/** Envoi bas niveau via Brevo — no-op + log en mode simulé, erreurs avalées. */
 async function send(to: string, mail: Mail): Promise<void> {
   if (isMockEmail) {
     console.log(`[email:mock] → ${to} · ${mail.subject}`);
     return;
   }
   try {
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${env.resendApiKey}`,
+        "api-key": env.brevoApiKey!,
         "Content-Type": "application/json",
+        accept: "application/json",
       },
       body: JSON.stringify({
-        from: FROM,
-        to,
-        reply_to: REPLY_TO,
+        sender: parseSender(env.emailFrom),
+        to: [{ email: to }],
+        replyTo: env.emailReplyTo ? { email: env.emailReplyTo } : undefined,
         subject: mail.subject,
-        html: mail.html,
-        text: mail.text,
+        htmlContent: mail.html,
+        textContent: mail.text,
       }),
     });
     if (!res.ok) {
-      console.error("[email] resend", res.status, await res.text().catch(() => ""));
+      console.error("[email] brevo", res.status, await res.text().catch(() => ""));
     }
   } catch (err) {
     console.error("[email] exception", (err as Error).message);

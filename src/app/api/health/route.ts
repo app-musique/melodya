@@ -24,7 +24,7 @@ export async function GET() {
     sunoBalance: isMockMusic ? null : await getSunoCredits(),
     lyrics: isMockLyrics ? "template" : "claude",
     payments: isMockPayments ? "mock" : "moneroo",
-    email: isMockEmail ? "mock" : "resend",
+    email: isMockEmail ? "mock" : "brevo",
     cronSecretSet: !!env.cronSecret,
     siteUrl: env.siteUrl,
   });

@@ -37,7 +37,7 @@ export type SystemHealth = {
     music: "mock" | "suno";
     lyrics: "template" | "claude";
     payments: "mock" | "moneroo";
-    email: "mock" | "resend";
+    email: "mock" | "brevo";
   };
   sunoBalance: number | null;
   generating: number;
@@ -69,7 +69,7 @@ export async function getSystemHealth(): Promise<SystemHealth> {
       music: isMockMusic ? "mock" : "suno",
       lyrics: isMockLyrics ? "template" : "claude",
       payments: isMockPayments ? "mock" : "moneroo",
-      email: isMockEmail ? "mock" : "resend",
+      email: isMockEmail ? "mock" : "brevo",
     },
     sunoBalance,
     generating: gen.count ?? 0,
