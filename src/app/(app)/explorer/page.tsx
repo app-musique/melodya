@@ -66,14 +66,11 @@ export default async function ExplorerPage({ searchParams }: Props) {
                 href={`/explorer/${it.id}`}
                 className="group block overflow-hidden rounded-3xl border border-line bg-white shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
               >
-                <div
-                  className="aspect-[4/3] w-full"
-                  style={{
-                    backgroundImage: `url(${it.cover})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }}
-                />
+                <div className="grid aspect-[4/3] w-full place-items-center bg-gradient-to-br from-plum to-brand-strong p-4 text-center">
+                  <span className="font-display text-lg font-extrabold text-white/90">
+                    {it.occasion ?? "Melodya"}
+                  </span>
+                </div>
                 <div className="p-4">
                   <p className="font-display text-base font-bold">{it.title}</p>
                   <p className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-soft">

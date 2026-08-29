@@ -80,14 +80,11 @@ export function ExplorePlayer({ item }: { item: ExploreDetail }) {
         <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_1.1fr]">
           {/* Colonne lecteur */}
           <div>
-            <div
-              className="aspect-square w-full max-w-sm rounded-3xl"
-              style={{
-                backgroundImage: `url(${item.cover})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            />
+            <div className="grid aspect-square w-full max-w-sm place-items-center rounded-3xl bg-gradient-to-br from-brand/80 to-brand-strong">
+              <span className="font-display text-2xl font-extrabold text-white/90">
+                {(item.occasion ?? "Melodya").toUpperCase()}
+              </span>
+            </div>
             <div className="mt-5 max-w-sm">
               <p className="text-xs font-semibold uppercase tracking-widest text-gold">
                 {item.occasion ?? "Inspiration"}
@@ -105,7 +102,7 @@ export function ExplorePlayer({ item }: { item: ExploreDetail }) {
 
               {item.audioUrl ? (
                 <>
-                  <audio ref={audioRef} src={item.audioUrl} preload="metadata" className="hidden">
+                  <audio ref={audioRef} src={item.audioUrl} preload="auto" className="hidden">
                     <track kind="captions" />
                   </audio>
                   <div className="mt-4">
