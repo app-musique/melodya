@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Check, Coins } from "lucide-react";
+import { Check, Coins, Sparkles } from "lucide-react";
 import { PackPicker } from "@/components/credits/pack-picker";
 import { getBalance, getCreditsPerSong, getPacks } from "@/lib/credits";
+import { getUserLoyalty } from "@/lib/loyalty";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { paymentMethods } from "@/lib/site";
 
@@ -16,10 +17,11 @@ export default async function CreditsPage({ searchParams }: Props) {
   if (!user) redirect("/connexion?next=/credits");
 
   const { paid, next } = await searchParams;
-  const [packs, creditsPerSong, balance] = await Promise.all([
+  const [packs, creditsPerSong, balance, loyalty] = await Promise.all([
     getPacks(),
     getCreditsPerSong(),
     getBalance(user.id),
+    getUserLoyalty(user.id),
   ]);
 
   const safeNext = next && next.startsWith("/") ? next : undefined;
@@ -46,8 +48,35 @@ export default async function CreditsPage({ searchParams }: Props) {
         </div>
       )}
 
+      {loyalty.tier && (
+        <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-brand/25 bg-brand/5 px-4 py-3 text-sm">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-brand-strong">
+            <Sparkles className="size-4" />
+            Palier {loyalty.tier.name}
+          </span>
+          {loyalty.discountPct > 0 ? (
+            <span className="text-ink-soft">
+              −{loyalty.discountPct}% appliqué sur tous les packs ci-dessous.
+            </span>
+          ) : (
+            <span className="text-ink-soft">Crée des chansons pour débloquer des remises.</span>
+          )}
+          {loyalty.nextTier && (
+            <span className="text-ink-soft">
+              Encore {loyalty.songsToNext} chanson{loyalty.songsToNext > 1 ? "s" : ""} pour{" "}
+              {loyalty.nextTier.name} (−{loyalty.nextTier.discount_pct}%).
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="mt-8">
-        <PackPicker packs={packs} creditsPerSong={creditsPerSong} next={safeNext} />
+        <PackPicker
+          packs={packs}
+          creditsPerSong={creditsPerSong}
+          discountPct={loyalty.discountPct}
+          next={safeNext}
+        />
       </div>
 
       <div className="mt-10 rounded-3xl border border-line bg-white p-6">

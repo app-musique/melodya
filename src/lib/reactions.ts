@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notify } from "@/lib/notifications";
+import { sendGiftReactionEmail } from "@/lib/email";
 import type { GiftReaction } from "@/lib/domain";
 
 export async function listReactions(songId: string): Promise<GiftReaction[]> {
@@ -43,6 +44,12 @@ export async function addReaction(
     body: input.message?.trim() ? `« ${input.message.trim()} »` : undefined,
     link: `/mes-chansons/${s.id}`,
   });
+  await sendGiftReactionEmail(s.user_id, {
+    authorName: who,
+    emoji: input.emoji,
+    message: input.message?.trim() || null,
+    songId: s.id,
+  }).catch(() => {});
 
   return { ok: true };
 }

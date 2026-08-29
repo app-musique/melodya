@@ -11,6 +11,7 @@ const PROTECTED_PREFIXES = [
   "/notifications",
   "/credits",
   "/profil",
+  "/studio",
   "/admin",
 ];
 
@@ -47,7 +48,8 @@ export async function updateSession(request: NextRequest) {
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/connexion";
-    url.searchParams.set("next", pathname);
+    url.search = "";
+    url.searchParams.set("next", pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
 

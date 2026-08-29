@@ -31,6 +31,8 @@ export const env = {
 
   monerooSecretKey: clean(process.env.MONEROO_SECRET_KEY),
   monerooWebhookSecret: clean(process.env.MONEROO_WEBHOOK_SECRET),
+
+  resendApiKey: clean(process.env.RESEND_API_KEY),
 };
 
 export function requireEnv(name: keyof typeof env): string {
@@ -51,3 +53,5 @@ export const isMockLyrics = !env.anthropicApiKey;
 export const isMockMusic = env.musicProvider !== "suno" || !env.sunoApiKey || !env.sunoApiBaseUrl;
 
 export const isMockPayments = !env.monerooSecretKey;
+
+export const isMockEmail = !env.resendApiKey;

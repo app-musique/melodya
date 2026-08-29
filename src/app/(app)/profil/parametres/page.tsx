@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Bell, FileText, Globe, LifeBuoy, LogOut, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, Globe, LifeBuoy, LogOut, Shield, Trash2 } from "lucide-react";
+import { EmailPrefToggle } from "@/components/profile/email-pref-toggle";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/credits";
 
 export const metadata: Metadata = { title: "Réglages", robots: { index: false } };
 
 export default async function ParametresPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
+  const profile = await getCurrentProfile();
 
   const rows = [
     { icon: Globe, label: "Langue", value: "Français", soon: true },
-    { icon: Bell, label: "Notifications", value: "Gérer les alertes", soon: true },
     { icon: Shield, label: "Confidentialité des créations", value: "Privé par défaut", soon: true },
     { icon: LifeBuoy, label: "Aide & support", value: "FAQ et contact", href: "/#faq" },
     { icon: FileText, label: "Conditions d'utilisation", value: "", href: "/#" },
@@ -29,7 +31,11 @@ export default async function ParametresPage() {
       </Link>
       <h1 className="font-display text-2xl font-extrabold tracking-tight">Réglages</h1>
 
-      <ul className="mt-6 divide-y divide-line rounded-3xl border border-line bg-white">
+      <div className="mt-6 divide-y divide-line rounded-3xl border border-line bg-white">
+        <EmailPrefToggle initial={profile?.email_notifications ?? true} />
+      </div>
+
+      <ul className="mt-3 divide-y divide-line rounded-3xl border border-line bg-white">
         {rows.map((r) => {
           const inner = (
             <>

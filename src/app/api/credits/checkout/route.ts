@@ -1,10 +1,11 @@
 import { apiError, json, requireUser } from "@/lib/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPack, grantCredits } from "@/lib/credits";
+import { getUserLoyalty } from "@/lib/loyalty";
 import { packCheckoutRequest } from "@/lib/schemas";
 import { initializePayment } from "@/lib/payments/moneroo";
 import { env } from "@/lib/env";
-import { CURRENCY } from "@/lib/pricing";
+import { CURRENCY, discountedPrice } from "@/lib/pricing";
 
 export async function POST(req: Request) {
   const { user, response } = await requireUser();
@@ -22,6 +23,10 @@ export async function POST(req: Request) {
   const pack = await getPack(parsed.data.packId);
   if (!pack || !pack.is_active) return apiError("Pack introuvable", 404);
 
+  // Remise fidélité éventuelle (n'affecte que le prix, pas les crédits accordés).
+  const { discountPct } = await getUserLoyalty(user!.id);
+  const amount = discountedPrice(pack.price, discountPct);
+
   const next = parsed.data.next && parsed.data.next.startsWith("/") ? parsed.data.next : "";
   const admin = createAdminClient();
 
@@ -33,7 +38,7 @@ export async function POST(req: Request) {
       provider: "moneroo",
       pack_id: pack.id,
       credits: pack.credits,
-      amount: pack.price,
+      amount,
       currency: pack.currency || CURRENCY,
       status: "initiated",
     })
@@ -48,7 +53,7 @@ export async function POST(req: Request) {
   try {
     init = await initializePayment({
       paymentId,
-      amount: pack.price,
+      amount,
       currency: pack.currency || CURRENCY,
       description: `Melodya — pack ${pack.name} (${pack.credits} crédits)`,
       returnUrl,

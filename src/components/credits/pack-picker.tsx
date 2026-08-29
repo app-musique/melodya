@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
-import { formatXOF, pricePerSong } from "@/lib/pricing";
+import { discountedPrice, formatXOF, pricePerSong } from "@/lib/pricing";
 import type { CreditPack } from "@/lib/domain";
 
 export function PackPicker({
   packs,
   creditsPerSong,
+  discountPct = 0,
   next,
 }: {
   packs: CreditPack[];
   creditsPerSong: number;
+  discountPct?: number;
   next?: string;
 }) {
   const [selected, setSelected] = useState<string | null>(
@@ -52,6 +54,8 @@ export function PackPicker({
       <div className="grid gap-3 sm:grid-cols-3">
         {packs.map((p) => {
           const active = selected === p.id;
+          const net = discountedPrice(p.price, discountPct);
+          const hasDiscount = net < p.price;
           return (
             <button
               key={p.id}
@@ -69,10 +73,15 @@ export function PackPicker({
               <span className="block font-display text-lg font-bold">{p.name}</span>
               <span className="mt-1 block text-sm text-ink-soft">{p.credits} crédits</span>
               <span className="mt-3 block font-display text-xl font-extrabold">
-                {formatXOF(p.price)}
+                {formatXOF(net)}
+                {hasDiscount && (
+                  <span className="ml-2 align-middle text-sm font-medium text-ink-soft line-through">
+                    {formatXOF(p.price)}
+                  </span>
+                )}
               </span>
               <span className="mt-1 block text-xs text-ink-soft">
-                ≈ {formatXOF(pricePerSong(p.price, p.credits, creditsPerSong))} / chanson
+                ≈ {formatXOF(pricePerSong(net, p.credits, creditsPerSong))} / chanson
               </span>
               {active && (
                 <Check className="absolute bottom-4 right-4 size-4 text-brand-strong" />
@@ -94,7 +103,10 @@ export function PackPicker({
         className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full gradient-brand px-7 py-4 font-semibold text-white shadow-[var(--shadow-float)] disabled:opacity-70 sm:w-auto"
       >
         {busy && <Loader2 className="size-4 animate-spin" />}
-        Payer {selected ? formatXOF(packs.find((p) => p.id === selected)!.price) : ""}
+        Payer{" "}
+        {selected
+          ? formatXOF(discountedPrice(packs.find((p) => p.id === selected)!.price, discountPct))
+          : ""}
         <ArrowRight className="size-4" />
       </button>
     </div>
