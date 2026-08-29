@@ -81,9 +81,19 @@ export type Song = {
   error: string | null;
   gift_slug: string | null;
   is_public: boolean;
+  is_showcase: boolean;
+  showcase_title: string | null;
+  showcase_artist: string | null;
+  plays_count: number;
+  gift_view_count: number;
+  inspire_count: number;
+  lyrics_timing: LyricsTiming | null;
   created_at: string;
   updated_at: string;
 };
+
+/** Timings des lignes de paroles pour l'affichage synchronisé. */
+export type LyricsTiming = { t: number; line: string }[];
 
 export type SongVersion = {
   id: string;
@@ -135,6 +145,48 @@ export type CreditTransaction = {
   balance_after: number;
   created_at: string;
 };
+
+export type Occasion = {
+  id: string;
+  user_id: string;
+  label: string;
+  person_name: string | null;
+  relationship: string | null;
+  event_date: string; // YYYY-MM-DD
+  is_recurring: boolean;
+  notify_days_before: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type NotificationType =
+  | "song_ready"
+  | "song_failed"
+  | "gift_viewed"
+  | "gift_reaction"
+  | "occasion_soon";
+
+export type AppNotification = {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type GiftReaction = {
+  id: string;
+  song_id: string;
+  emoji: string;
+  message: string | null;
+  author_name: string | null;
+  created_at: string;
+};
+
+export const REACTION_EMOJIS = ["❤️", "🥹", "🎉", "🙏", "🔥", "✨"];
 
 export const STATUS_LABEL: Record<SongStatus, string> = {
   draft: "Brouillon",

@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, CalendarPlus, Coins, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarHeart, Coins, Sparkles } from "lucide-react";
 import { StatusBadge } from "@/components/song/status-badge";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getBalance, getCurrentProfile } from "@/lib/credits";
 import { listSongs } from "@/lib/songs";
+import { upcomingOccasions } from "@/lib/occasions";
+import { syncOccasionNotifications } from "@/lib/notifications";
 
 export const metadata: Metadata = { title: "Accueil", robots: { index: false } };
 
@@ -20,10 +22,13 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
 
-  const [profile, balance, songs] = await Promise.all([
+  await syncOccasionNotifications(user.id).catch(() => {});
+
+  const [profile, balance, songs, occasions] = await Promise.all([
     getCurrentProfile(),
     getBalance(user.id),
     listSongs(),
+    upcomingOccasions(user.id, 60),
   ]);
 
   const firstName = (profile?.full_name || "").split(" ")[0];
@@ -76,15 +81,47 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <div className="rounded-3xl border border-dashed border-line bg-white p-5">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <CalendarPlus className="size-4 text-brand-strong" />
-            Occasions à venir
+        <div className="rounded-3xl border border-line bg-white p-5">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <CalendarHeart className="size-4 text-brand-strong" />
+              Occasions à venir
+            </span>
+            <Link href="/occasions" className="text-xs font-medium text-ink-soft hover:text-ink">
+              Gérer
+            </Link>
           </div>
-          <p className="mt-2 text-sm text-ink-soft">
-            Ajoute les dates à ne pas oublier (anniversaires, fêtes) — on te préviendra à
-            l&apos;avance. <span className="text-ink-soft/70">Bientôt.</span>
-          </p>
+          {occasions.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-soft">
+              Ajoute les dates à ne pas oublier —{" "}
+              <Link href="/occasions" className="font-semibold text-brand-strong">
+                ajouter une date
+              </Link>
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {occasions.slice(0, 3).map((o) => (
+                <li key={o.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="min-w-0 truncate">
+                    {o.label}
+                    {o.person_name ? ` · ${o.person_name}` : ""}
+                    <span className="text-ink-soft">
+                      {" "}
+                      — {o.daysUntil === 0 ? "aujourd'hui" : `dans ${o.daysUntil} j`}
+                    </span>
+                  </span>
+                  <a
+                    href={`/commander?occasion=${encodeURIComponent(o.label)}${
+                      o.person_name ? `&recipient=${encodeURIComponent(o.person_name)}` : ""
+                    }`}
+                    className="shrink-0 text-xs font-semibold text-brand-strong"
+                  >
+                    Créer
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 

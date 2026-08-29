@@ -6,6 +6,8 @@ import {
   Clock,
   Copy,
   Download,
+  Eye,
+  Headphones,
   Loader2,
   Music4,
   RefreshCw,
@@ -13,9 +15,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { StatusBadge } from "@/components/song/status-badge";
-import type { Song, SongAsset, SongVersion } from "@/lib/domain";
+import type { GiftReaction, Song, SongAsset, SongVersion } from "@/lib/domain";
 
-type Bundle = { song: Song; versions: SongVersion[]; assets: SongAsset[] };
+type Bundle = {
+  song: Song;
+  versions: SongVersion[];
+  assets: SongAsset[];
+  reactions: GiftReaction[];
+};
 
 export function SongDetail({ initial }: { initial: Bundle }) {
   const [bundle, setBundle] = useState<Bundle>(initial);
@@ -90,6 +97,7 @@ export function SongDetail({ initial }: { initial: Bundle }) {
         <>
           <VersionPicker bundle={bundle} onChange={setBundle} />
           <ShareCard song={song} />
+          {song.is_public && <ImpactCard song={song} reactions={bundle.reactions} />}
         </>
       )}
 
@@ -113,6 +121,46 @@ function Card({ children }: { children: React.ReactNode }) {
     <div className="rounded-3xl border border-line bg-white p-6 shadow-[var(--shadow-soft)]">
       {children}
     </div>
+  );
+}
+
+function ImpactCard({ song, reactions }: { song: Song; reactions: GiftReaction[] }) {
+  return (
+    <Card>
+      <h2 className="font-display text-lg font-bold">L&apos;impact de ton cadeau</h2>
+      <div className="mt-3 flex gap-6 text-sm">
+        <span className="inline-flex items-center gap-1.5">
+          <Eye className="size-4 text-brand-strong" />
+          <b>{song.gift_view_count}</b> ouverture{song.gift_view_count === 1 ? "" : "s"}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Headphones className="size-4 text-brand-strong" />
+          <b>{song.plays_count}</b> écoute{song.plays_count === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {reactions.length > 0 ? (
+        <ul className="mt-4 space-y-3 border-t border-line pt-4">
+          {reactions.map((r) => (
+            <li key={r.id} className="flex gap-3 text-sm">
+              <span className="text-xl">{r.emoji}</span>
+              <span className="min-w-0">
+                {r.message && <span className="block">« {r.message} »</span>}
+                <span className="text-xs text-ink-soft">
+                  {r.author_name || "Anonyme"} ·{" "}
+                  {new Date(r.created_at).toLocaleDateString("fr-FR")}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm text-ink-soft">
+          Pas encore de réaction. Elles apparaîtront ici quand ton destinataire laissera un mot
+          sur la page cadeau.
+        </p>
+      )}
+    </Card>
   );
 }
 
