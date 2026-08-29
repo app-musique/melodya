@@ -151,21 +151,24 @@ export function AuthForm() {
           logo_alignment: "left",
           locale: "fr",
         });
-        // Filet : si Google n'a rien rendu (client ID / origine non autorisée),
-        // on retombe sur le bouton redirect classique.
-        window.setTimeout(() => {
-          if (!cancelled && gsiRef.current && gsiRef.current.childElementCount === 0) {
-            setGsiFailed(true);
-          }
-        }, 3000);
       } catch {
-        if (!cancelled) setGsiFailed(true);
+        setGsiFailed(true);
       }
     })();
 
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Filet indépendant : si le bouton Google ne s'est pas affiché (client ID /
+  // origine non autorisée, réseau…), on bascule sur le bouton redirect.
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+    const t = window.setTimeout(() => {
+      if (gsiRef.current && gsiRef.current.childElementCount === 0) setGsiFailed(true);
+    }, 4000);
+    return () => window.clearTimeout(t);
   }, []);
 
   // Repli : bouton redirect classique (pas de client ID, ou GSI KO).
