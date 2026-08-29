@@ -17,22 +17,37 @@ export async function GET(_req: Request, { params }: Params) {
 
   let recipient = "Une chanson";
   let occasion = "Chanson personnalisée";
+  let coverUrl: string | null = null;
 
   if (isSupabaseConfigured) {
     try {
       const admin = createAdminClient();
       const { data } = await admin
         .from("songs")
-        .select("recipient_name, occasion")
+        .select("recipient_name, occasion, cover_url")
         .eq("id", id)
         .maybeSingle();
       if (data) {
         recipient = (data.recipient_name as string) || recipient;
         occasion = (data.occasion as string) || occasion;
+        coverUrl = (data.cover_url as string | null) ?? null;
       }
     } catch {
       // valeurs par défaut
     }
+  }
+
+  // Pochette réelle disponible : on la sert telle quelle (carrée) pour l'aperçu social.
+  if (coverUrl) {
+    return new ImageResponse(
+      (
+        <div style={{ display: "flex", width: "100%", height: "100%" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={coverUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        </div>
+      ),
+      { width: 1200, height: 1200 },
+    );
   }
 
   const hash = [...id].reduce((a, c) => a + c.charCodeAt(0), 0);

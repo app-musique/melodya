@@ -92,6 +92,8 @@ export type Song = {
   assets_synced_at: string | null;
   shared_with_followers: boolean;
   followers_notified_at: string | null;
+  cover_url: string | null;
+  cover_custom: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -108,6 +110,7 @@ export type SongVersion = {
   is_selected: boolean;
   provider_audio_id: string | null;
   persisted_at: string | null;
+  image_url: string | null;
   created_at: string;
 };
 

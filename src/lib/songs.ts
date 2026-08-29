@@ -8,7 +8,7 @@ import { CURRENCY } from "@/lib/pricing";
 import { getCreditsPerSong, grantCredits, spendCreditForSong } from "@/lib/credits";
 import { notify } from "@/lib/notifications";
 import { sendSongReadyEmail } from "@/lib/email";
-import { persistAudio } from "@/lib/media";
+import { persistAudio, persistImage, storeCoverBuffer } from "@/lib/media";
 import { logError } from "@/lib/errors";
 import type { GiftReaction, Song, SongVersion, SongAsset } from "@/lib/domain";
 import { env } from "@/lib/env";
@@ -190,6 +190,58 @@ export async function setShare(songId: string, isPublic: boolean): Promise<strin
     .eq("id", songId);
   if (error) throw error;
   return isPublic ? slug : null;
+}
+
+/**
+ * Pochette de chanson choisie par le créateur : soit une des images générées par
+ * Suno (`fromUrl`), soit une image/GIF importé (`upload`). Marque `cover_custom`
+ * pour que le pipeline ne l'écrase plus.
+ */
+export async function setSongCover(
+  songId: string,
+  input: { fromUrl?: string; upload?: { buffer: Buffer; contentType: string } },
+): Promise<{ ok: boolean; error?: string; coverUrl?: string }> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Non authentifié" };
+
+  const admin = createAdminClient();
+  const { data: song } = await admin
+    .from("songs")
+    .select("id, user_id")
+    .eq("id", songId)
+    .maybeSingle();
+  if (!song || (song as { user_id: string }).user_id !== user.id) {
+    return { ok: false, error: "Chanson introuvable" };
+  }
+
+  let coverUrl: string | null = null;
+
+  if (input.upload) {
+    coverUrl = await storeCoverBuffer(songId, input.upload.buffer, input.upload.contentType);
+    if (!coverUrl) return { ok: false, error: "Import impossible" };
+  } else if (input.fromUrl) {
+    // Sécurité : l'URL doit être une des pochettes de version de CETTE chanson.
+    const { data: versions } = await admin
+      .from("song_versions")
+      .select("image_url")
+      .eq("song_id", songId);
+    const allowed = ((versions as { image_url: string | null }[]) ?? [])
+      .map((v) => v.image_url)
+      .filter(Boolean);
+    if (!allowed.includes(input.fromUrl)) return { ok: false, error: "Pochette inconnue" };
+    coverUrl = await persistImage(songId, input.fromUrl, `cover-picked`);
+  } else {
+    return { ok: false, error: "Aucune image fournie" };
+  }
+
+  await admin
+    .from("songs")
+    .update({ cover_url: coverUrl, cover_custom: true })
+    .eq("id", songId);
+  return { ok: true, coverUrl: coverUrl ?? undefined };
 }
 
 // ------------------------------------------------------------------
@@ -385,6 +437,7 @@ export async function advanceGeneration(songId: string): Promise<Song> {
       duration_sec: t.durationSec,
       is_selected: i === 0,
       provider_audio_id: t.providerAudioId ?? null,
+      image_url: t.imageUrl ?? null,
       persisted_at: null,
     })),
   );
@@ -400,6 +453,11 @@ export async function advanceGeneration(songId: string): Promise<Song> {
   // indevinable). L'utilisateur peut le repasser en privé depuis sa fiche.
   const ready = claimed as Song;
   const shareUpdate: Record<string, unknown> = { assets_synced_at: null };
+  // Pochette générée par Suno (URL brute, valable ~15 j) — ré-hébergée ensuite
+  // par syncSongAssets. On n'écrase jamais une pochette choisie par le créateur.
+  if (!ready.cover_custom && tracks[0]?.imageUrl) {
+    shareUpdate.cover_url = tracks[0].imageUrl;
+  }
   if (!ready.is_showcase) {
     shareUpdate.is_public = true;
     shareUpdate.gift_slug = ready.gift_slug ?? nanoid(12).toLowerCase();
@@ -477,6 +535,14 @@ export async function syncSongAssets(songId: string): Promise<void> {
       .eq("song_id", songId)
       .order("idx");
     const allPersisted = ((after2 as SongVersion[]) ?? []).every((r) => r.persisted_at);
+
+    // 1b. ré-héberge la pochette générée par Suno (sauf si le créateur a choisi la sienne)
+    if (!song.cover_custom && song.cover_url && !onOurStorage(song.cover_url)) {
+      const newCover = await persistImage(songId, song.cover_url);
+      if (onOurStorage(newCover)) {
+        await admin.from("songs").update({ cover_url: newCover }).eq("id", songId);
+      }
+    }
 
     // 2. timings de paroles réels (best-effort) quand l'audio est finalisé
     const provider = getMusicProvider();

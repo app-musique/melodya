@@ -11,6 +11,8 @@ export type ExploreItem = {
   occasion: string | null;
   style: string | null;
   cover: string;
+  /** Pochette réelle (Suno / import créateur) ; null => tuile dégradée. */
+  coverImage: string | null;
   plays: number;
   reactions: number;
   isShowcase: boolean;
@@ -31,7 +33,7 @@ export type ExploreDetail = ExploreItem & {
 };
 
 const SELECT =
-  "id,user_id,is_showcase,shared_with_followers,showcase_title,showcase_artist,sender_name,recipient_name,occasion,music_style,mood,voice,language,lyrics,lyrics_timing,plays_count,status,is_public";
+  "id,user_id,is_showcase,shared_with_followers,showcase_title,showcase_artist,sender_name,recipient_name,occasion,music_style,mood,voice,language,lyrics,lyrics_timing,plays_count,status,is_public,cover_url";
 
 type ItemExtras = {
   reactions?: number;
@@ -54,6 +56,7 @@ function toItem(s: Record<string, unknown>, extras: ItemExtras = {}): ExploreIte
     occasion: song.occasion,
     style: song.music_style,
     cover: `${env.siteUrl}/api/cover/${song.id}`,
+    coverImage: song.cover_url ?? null,
     plays: song.plays_count ?? 0,
     reactions: extras.reactions ?? 0,
     isShowcase: song.is_showcase,

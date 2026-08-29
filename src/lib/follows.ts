@@ -22,6 +22,7 @@ export type CreatorPublicSong = {
   occasion: string | null;
   style: string | null;
   cover: string;
+  coverImage: string | null;
   reactions: number;
   createdAt: string;
 };
@@ -88,14 +89,17 @@ export async function getCreatorByHandle(handle: string): Promise<CreatorProfile
   // ou vitrines (une vitrine est déjà « rendue visible » par son créateur).
   const { data: rows } = await admin
     .from("songs")
-    .select("id, showcase_title, occasion, music_style, created_at")
+    .select("id, showcase_title, occasion, music_style, created_at, cover_url")
     .eq("user_id", p.id)
     .eq("status", "ready")
     .or("shared_with_followers.eq.true,is_showcase.eq.true")
     .order("created_at", { ascending: false })
     .limit(60);
 
-  const songs = (rows as Pick<Song, "id" | "showcase_title" | "occasion" | "music_style" | "created_at">[]) ?? [];
+  const songs =
+    (rows as (Pick<Song, "id" | "showcase_title" | "occasion" | "music_style" | "created_at"> & {
+      cover_url: string | null;
+    })[]) ?? [];
   const totals = await reactionTotals(songs.map((s) => s.id));
 
   return {
@@ -110,6 +114,7 @@ export async function getCreatorByHandle(handle: string): Promise<CreatorProfile
       occasion: s.occasion,
       style: s.music_style,
       cover: `${env.siteUrl}/api/cover/${s.id}`,
+      coverImage: s.cover_url ?? null,
       reactions: totals.get(s.id) ?? 0,
       createdAt: s.created_at,
     })),
