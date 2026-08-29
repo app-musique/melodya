@@ -60,6 +60,48 @@ export async function listSongs(): Promise<Song[]> {
   return (data as Song[]) ?? [];
 }
 
+export type SongListItem = Song & {
+  audio_url: string | null;
+  duration_sec: number | null;
+};
+
+/** Comme listSongs, mais joint l'audio de la version choisie (pour l'écoute inline). */
+export async function listSongsWithAudio(): Promise<SongListItem[]> {
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("songs")
+    .select("*")
+    .order("created_at", { ascending: false });
+  const songs = (data as Song[]) ?? [];
+
+  const readyIds = songs.filter((s) => s.status === "ready").map((s) => s.id);
+  const audioById = new Map<string, { audio_url: string; duration_sec: number | null }>();
+  if (readyIds.length) {
+    const { data: versions } = await supabase
+      .from("song_versions")
+      .select("song_id, audio_url, duration_sec, is_selected, idx")
+      .in("song_id", readyIds)
+      .order("idx");
+    for (const v of (versions as {
+      song_id: string;
+      audio_url: string;
+      duration_sec: number | null;
+      is_selected: boolean;
+    }[]) ?? []) {
+      // 1re version par défaut, remplacée par celle marquée « choisie ».
+      if (!audioById.has(v.song_id) || v.is_selected) {
+        audioById.set(v.song_id, { audio_url: v.audio_url, duration_sec: v.duration_sec });
+      }
+    }
+  }
+
+  return songs.map((s) => ({
+    ...s,
+    audio_url: audioById.get(s.id)?.audio_url ?? null,
+    duration_sec: audioById.get(s.id)?.duration_sec ?? null,
+  }));
+}
+
 export async function getSongBundle(id: string): Promise<{
   song: Song;
   versions: SongVersion[];
