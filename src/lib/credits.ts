@@ -24,7 +24,7 @@ export async function getSettings(): Promise<{
 }> {
   const [cps, bonus] = await Promise.all([
     getSetting("credits_per_song", 1),
-    getSetting("signup_bonus_credits", 1),
+    getSetting("signup_bonus_credits", 0),
   ]);
   return { credits_per_song: cps, signup_bonus_credits: bonus };
 }

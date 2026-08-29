@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Coins, Sparkles, Wand2 } from "lucide-react";
 import { Button, ChoiceGrid, SelectField, TextArea, TextField } from "@/components/ui";
@@ -33,6 +33,55 @@ type FormState = {
 
 const STEPS = ["Occasion", "Histoire", "Style & voix", "Paroles", "Créer"];
 
+const BRIEF_KEYS: (keyof FormState)[] = [
+  "occasion",
+  "recipient_name",
+  "sender_name",
+  "relationship",
+  "story",
+  "key_facts",
+  "music_style",
+  "voice",
+  "language",
+  "mood",
+];
+
+/** Étape où reprendre un brouillon : la première qui n'est pas terminée. */
+function resumeStep(s: Song): number {
+  if (s.lyrics_approved) return 4;
+  if ((s.lyrics ?? "").trim().length >= 40) return 3;
+  const briefDone =
+    !!s.recipient_name &&
+    !!s.sender_name &&
+    !!s.relationship &&
+    (s.story ?? "").trim().length >= 20;
+  const styleDone = !!s.music_style && !!s.voice && !!s.mood;
+  if (briefDone && styleDone) return 3;
+  if (briefDone) return 2;
+  if (s.occasion) return 1;
+  return 0;
+}
+
+/** Corps du PATCH d'autosave : tous les champs, `voice` seulement si renseignée
+ * (l'enum côté serveur rejette la chaîne vide). */
+function autosavePayload(f: FormState) {
+  const p: Record<string, unknown> = {
+    occasion: f.occasion,
+    recipient_name: f.recipient_name,
+    sender_name: f.sender_name,
+    relationship: f.relationship,
+    story: f.story,
+    key_facts: f.key_facts,
+    music_style: f.music_style,
+    language: f.language,
+    mood: f.mood,
+    lyrics: f.lyrics,
+    lyrics_approved: f.lyrics_approved,
+  };
+  if (f.voice) p.voice = f.voice;
+  return p;
+}
+
 export function Wizard({
   song,
   balance,
@@ -57,27 +106,86 @@ export function Wizard({
     lyrics: song.lyrics ?? "",
     lyrics_approved: song.lyrics_approved,
   });
-  const [step, setStep] = useState(song.lyrics_approved ? 4 : 0);
+  const [step, setStep] = useState(() => resumeStep(song));
   const [busy, setBusy] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
   const [regenCount, setRegenCount] = useState(song.regen_count);
   const [error, setError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
+  const [showResumeHint, setShowResumeHint] = useState(() => resumeStep(song) >= 2);
 
   const enoughCredits = balance >= creditsPerSong;
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
-    setForm((f) => ({ ...f, [k]: v }));
-
-  async function patch(fields: Partial<FormState>) {
-    const res = await fetch(`/api/songs/${song.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(fields),
+    setForm((f) => {
+      const nextForm = { ...f, [k]: v };
+      // Modifier le brief invalide les paroles déjà validées.
+      if (BRIEF_KEYS.includes(k) && f.lyrics_approved) nextForm.lyrics_approved = false;
+      return nextForm;
     });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      throw new Error(j.error ?? "Enregistrement impossible");
-    }
-  }
+
+  const patch = useCallback(
+    async (fields: Record<string, unknown>) => {
+      const res = await fetch(`/api/songs/${song.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fields),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? "Enregistrement impossible");
+      }
+    },
+    [song.id],
+  );
+
+  const formRef = useRef(form);
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
+  const savedSnapshotRef = useRef(JSON.stringify(autosavePayload(form)));
+
+  // Autosave : enregistre le brouillon ~1 s après la dernière modification.
+  useEffect(() => {
+    if (busy || genBusy) return;
+    const payload = autosavePayload(form);
+    const snap = JSON.stringify(payload);
+    if (snap === savedSnapshotRef.current) return;
+    setSaveState("saving");
+    const t = window.setTimeout(async () => {
+      try {
+        await patch(payload);
+        savedSnapshotRef.current = snap;
+        setSaveState("saved");
+      } catch {
+        setSaveState("error");
+      }
+    }, 1000);
+    return () => window.clearTimeout(t);
+  }, [form, busy, genBusy, patch]);
+
+  // Filet : si l'onglet se ferme avant l'autosave, on force l'envoi.
+  useEffect(() => {
+    const flush = () => {
+      const payload = autosavePayload(formRef.current);
+      if (JSON.stringify(payload) === savedSnapshotRef.current) return;
+      fetch(`/api/songs/${song.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      }).catch(() => {});
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [song.id]);
 
   function validateStep(): string | null {
     if (step === 0) {
@@ -102,6 +210,20 @@ export function Wizard({
     return null;
   }
 
+  async function save(): Promise<boolean> {
+    const payload = autosavePayload(form);
+    try {
+      await patch(payload);
+      savedSnapshotRef.current = JSON.stringify(payload);
+      setSaveState("saved");
+      return true;
+    } catch (e) {
+      setSaveState("error");
+      setError((e as Error).message);
+      return false;
+    }
+  }
+
   async function next() {
     const err = validateStep();
     if (err) {
@@ -109,29 +231,10 @@ export function Wizard({
       return;
     }
     setError(null);
+    setShowResumeHint(false);
     setBusy(true);
     try {
-      const slices: Partial<FormState>[] = [
-        { occasion: form.occasion },
-        {
-          recipient_name: form.recipient_name,
-          sender_name: form.sender_name,
-          relationship: form.relationship,
-          story: form.story,
-          key_facts: form.key_facts,
-        },
-        {
-          music_style: form.music_style,
-          voice: form.voice as FormState["voice"],
-          language: form.language,
-          mood: form.mood,
-        },
-        { lyrics: form.lyrics, lyrics_approved: form.lyrics_approved },
-      ];
-      await patch(slices[step]);
-      setStep((s) => Math.min(s + 1, STEPS.length - 1));
-    } catch (e) {
-      setError((e as Error).message);
+      if (await save()) setStep((s) => Math.min(s + 1, STEPS.length - 1));
     } finally {
       setBusy(false);
     }
@@ -139,6 +242,7 @@ export function Wizard({
 
   function back() {
     setError(null);
+    setShowResumeHint(false);
     setStep((s) => Math.max(s - 1, 0));
   }
 
@@ -146,18 +250,9 @@ export function Wizard({
     setError(null);
     setGenBusy(true);
     try {
-      await patch({
-        occasion: form.occasion,
-        recipient_name: form.recipient_name,
-        sender_name: form.sender_name,
-        relationship: form.relationship,
-        story: form.story,
-        key_facts: form.key_facts,
-        music_style: form.music_style,
-        voice: form.voice as FormState["voice"],
-        language: form.language,
-        mood: form.mood,
-      });
+      const payload = autosavePayload(form);
+      await patch(payload);
+      savedSnapshotRef.current = JSON.stringify(payload);
       const res = await fetch("/api/lyrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -178,7 +273,10 @@ export function Wizard({
     setError(null);
     setBusy(true);
     try {
-      await patch({ lyrics: form.lyrics, lyrics_approved: form.lyrics_approved });
+      if (!(await save())) {
+        setBusy(false);
+        return;
+      }
       const res = await fetch(`/api/songs/${song.id}/create`, { method: "POST" });
       const j = await res.json();
       if (res.status === 402) {
@@ -211,6 +309,13 @@ export function Wizard({
           </li>
         ))}
       </ol>
+
+      {showResumeHint && (
+        <p className="mb-4 rounded-xl bg-brand/10 px-4 py-3 text-sm text-brand-strong">
+          Tu reprends ta chanson là où tu t&apos;étais arrêté — tout est enregistré au fur et à
+          mesure.
+        </p>
+      )}
 
       <div className="rounded-3xl border border-line bg-white p-6 shadow-[var(--shadow-soft)] sm:p-8">
         {step === 0 && (
@@ -261,6 +366,7 @@ export function Wizard({
             <TextArea
               label="L'histoire, les souvenirs, ce que tu veux dire"
               rows={5}
+              maxLength={4000}
               value={form.story}
               onChange={(e) => set("story", e.target.value)}
               placeholder="Comment vous vous êtes rencontrés, une anecdote marquante, ce que cette personne représente…"
@@ -268,6 +374,7 @@ export function Wizard({
             <TextArea
               label="Détails précis à intégrer (optionnel)"
               rows={3}
+              maxLength={2000}
               value={form.key_facts}
               onChange={(e) => set("key_facts", e.target.value)}
               placeholder="Dates, lieux, surnoms, blagues internes, métier…"
@@ -335,6 +442,7 @@ export function Wizard({
                 <TextArea
                   label="Paroles (modifiables)"
                   rows={14}
+                  maxLength={6000}
                   value={form.lyrics}
                   onChange={(e) => set("lyrics", e.target.value)}
                   className="font-mono text-[13px] leading-relaxed"
@@ -414,11 +522,18 @@ export function Wizard({
           </p>
         )}
 
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6 flex items-center justify-between gap-3">
           <Button variant="ghost" onClick={back} disabled={step === 0 || busy}>
             <ArrowLeft className="size-4" />
             {step === 4 ? "Modifier" : "Retour"}
           </Button>
+          <span className="text-xs text-ink-soft" aria-live="polite">
+            {saveState === "saving"
+              ? "Enregistrement…"
+              : saveState === "error"
+                ? "Non enregistré — vérifie ta connexion"
+                : "Brouillon enregistré"}
+          </span>
           {step < 4 && (
             <Button loading={busy} onClick={next}>
               Continuer
