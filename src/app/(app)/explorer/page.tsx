@@ -68,7 +68,7 @@ export default async function ExplorerPage({ searchParams }: Props) {
               >
                 <div className="grid aspect-[4/3] w-full place-items-center bg-gradient-to-br from-plum to-brand-strong p-4 text-center">
                   <span className="font-display text-lg font-extrabold text-white/90">
-                    {it.occasion ?? "Melodya"}
+                    {it.occasion ?? "Muzikii"}
                   </span>
                 </div>
                 <div className="p-4">

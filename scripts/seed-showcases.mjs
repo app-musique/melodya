@@ -124,7 +124,7 @@ async function main() {
           email: "demo@melodya.app",
           password: crypto.randomUUID(),
           email_confirm: true,
-          user_metadata: { full_name: "Melodya" },
+          user_metadata: { full_name: "Muzikii" },
         }),
       })
     ).json();

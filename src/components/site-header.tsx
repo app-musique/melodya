@@ -27,7 +27,7 @@ export function SiteHeader() {
       }`}
     >
       <div className="mx-auto flex h-18 max-w-6xl items-center justify-between px-5">
-        <a href="#top" aria-label="Melodya — accueil">
+        <a href="#top" aria-label="Muzikii — accueil">
           <Logo />
         </a>
 

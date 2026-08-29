@@ -1,6 +1,6 @@
 /**
  * Gabarits d'emails transactionnels — fonctions pures renvoyant { subject, html, text }.
- * HTML inline-styled (compat clients mail), palette Melodya. Nom « Melodya » = placeholder.
+ * HTML inline-styled (compat clients mail), palette Muzikii.
  */
 
 const PLUM = "#3b1d4e";
@@ -33,7 +33,7 @@ function shell(opts: {
   <tr><td align="center">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #ece3ee">
       <tr><td style="background:${PLUM};padding:20px 28px">
-        <span style="color:#fff;font-size:19px;font-weight:800;letter-spacing:-0.3px">Melodya</span>
+        <span style="color:#fff;font-size:19px;font-weight:800;letter-spacing:-0.3px">Muzikii</span>
       </td></tr>
       <tr><td style="padding:28px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -44,8 +44,8 @@ function shell(opts: {
         </table>
       </td></tr>
       <tr><td style="padding:16px 28px;border-top:1px solid #ece3ee;color:${SOFT};font-size:12px;line-height:1.6">
-        Melodya — ta chanson personnalisée par IA.<br>
-        Tu reçois cet email suite à ton activité sur Melodya. Gère tes alertes dans ton profil › Réglages.
+        Muzikii — ta chanson personnalisée par IA.<br>
+        Tu reçois cet email suite à ton activité sur Muzikii. Gère tes alertes dans ton profil › Réglages.
       </td></tr>
     </table>
   </td></tr>
@@ -57,16 +57,16 @@ const hi = (name: string) => (name ? `Salut ${name},` : "Salut,");
 
 export function welcomeTpl(o: { name: string; siteUrl: string }): Mail {
   return {
-    subject: "Bienvenue sur Melodya 🎶",
+    subject: "Bienvenue sur Muzikii 🎶",
     html: shell({
       preview: "Ton premier crédit t'attend.",
       heading: "Bienvenue !",
-      intro: `${hi(o.name)} ton compte est prêt et un crédit t'attend. Une occasion, une histoire, un style — et Melodya compose une chanson personnalisée en quelques minutes.`,
+      intro: `${hi(o.name)} ton compte est prêt et un crédit t'attend. Une occasion, une histoire, un style — et Muzikii compose une chanson personnalisée en quelques minutes.`,
       ctaLabel: "Créer ma première chanson",
       ctaHref: `${o.siteUrl}/commander`,
       outro: "Astuce : ajoute les anniversaires à ne pas oublier dans ton carnet d'occasions, on te préviendra à l'avance.",
     }),
-    text: `${hi(o.name)} bienvenue sur Melodya. Un crédit t'attend : ${o.siteUrl}/commander`,
+    text: `${hi(o.name)} bienvenue sur Muzikii. Un crédit t'attend : ${o.siteUrl}/commander`,
   };
 }
 

@@ -10,7 +10,7 @@ export async function AppHeader() {
   return (
     <header className="border-b border-line bg-cream/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-        <Link href="/" aria-label="Melodya — accueil">
+        <Link href="/" aria-label="Muzikii — accueil">
           <Logo />
         </Link>
         {user ? (

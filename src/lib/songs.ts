@@ -267,7 +267,7 @@ export async function startGeneration(songId: string): Promise<void> {
     const provider = getMusicProvider();
     const { jobId } = await provider.createSong({
       songId,
-      title: `${song.recipient_name ?? "Melodya"} — ${song.occasion ?? "chanson"}`,
+      title: `${song.recipient_name ?? "Muzikii"} — ${song.occasion ?? "chanson"}`,
       lyrics,
       style: song.music_style ?? "Afrobeat",
       voice: song.voice ?? "femme",
@@ -279,7 +279,7 @@ export async function startGeneration(songId: string): Promise<void> {
       .update({ provider: provider.name, provider_job_id: jobId })
       .eq("id", songId);
   } catch (err) {
-    // Échec avant même la création du job : on rembourse le crédit Melodya
+    // Échec avant même la création du job : on rembourse le crédit Muzikii
     // (le fournisseur n'a rien produit) et on renvoie la chanson en brouillon.
     await logError("startGeneration", err, { songId });
     await grantCredits(song.user_id, song.credits_cost || 1, "refund");

@@ -14,7 +14,7 @@ export function Logo({ className = "" }: { className?: string }) {
           <circle cx="16" cy="16" r="3" fill="currentColor" />
         </svg>
       </span>
-      Melodya
+      Muzikii
     </span>
   );
 }

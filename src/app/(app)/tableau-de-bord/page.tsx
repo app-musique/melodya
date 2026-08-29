@@ -37,7 +37,7 @@ export default async function DashboardPage() {
       <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
         {greeting()}{firstName ? `, ${firstName}` : ""} 👋
       </h1>
-      <p className="mt-1 text-sm text-ink-soft">Ton tableau de bord Melodya.</p>
+      <p className="mt-1 text-sm text-ink-soft">Ton tableau de bord Muzikii.</p>
 
       {/* CTA principale */}
       <Link

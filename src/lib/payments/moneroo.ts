@@ -43,7 +43,7 @@ export async function initializePayment(input: InitPaymentInput): Promise<InitPa
       customer: {
         email: input.customer.email,
         first_name: input.customer.firstName || "Client",
-        last_name: input.customer.lastName || "Melodya",
+        last_name: input.customer.lastName || "Muzikii",
       },
       return_url: input.returnUrl,
       metadata: { payment_id: input.paymentId },

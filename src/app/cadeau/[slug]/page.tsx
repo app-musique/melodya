@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `Une chanson pour ${gift.song.recipient_name ?? "toi"}`;
   return {
     title,
-    description: `${gift.song.occasion ?? "Un moment spécial"} — une chanson personnalisée créée avec Melodya.`,
+    description: `${gift.song.occasion ?? "Un moment spécial"} — une chanson personnalisée créée avec Muzikii.`,
     openGraph: {
       title,
       images: gift.cover ? [gift.cover] : [`/api/cover/${gift.song.id}`],
@@ -113,7 +113,7 @@ export default async function GiftPage({ params }: Props) {
         <div className="mt-8 border-t border-white/10 pt-6 text-sm text-cream/60">
           Créée avec{" "}
           <Link href="/" className="font-semibold text-gold">
-            Melodya
+            Muzikii
           </Link>{" "}
           — ta chanson personnalisée par IA.
         </div>

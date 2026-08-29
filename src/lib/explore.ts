@@ -32,7 +32,7 @@ function toItem(s: Record<string, unknown>): ExploreItem {
     id: song.id,
     title:
       song.showcase_title ||
-      (song.is_showcase ? "Une chanson Melodya" : `Pour ${song.recipient_name ?? "un proche"}`),
+      (song.is_showcase ? "Une chanson Muzikii" : `Pour ${song.recipient_name ?? "un proche"}`),
     artist: song.showcase_artist || song.sender_name || null,
     occasion: song.occasion,
     style: song.music_style,

@@ -82,7 +82,7 @@ export function ExplorePlayer({ item }: { item: ExploreDetail }) {
           <div>
             <div className="grid aspect-square w-full max-w-sm place-items-center rounded-3xl bg-gradient-to-br from-brand/80 to-brand-strong">
               <span className="font-display text-2xl font-extrabold text-white/90">
-                {(item.occasion ?? "Melodya").toUpperCase()}
+                {(item.occasion ?? "Muzikii").toUpperCase()}
               </span>
             </div>
             <div className="mt-5 max-w-sm">

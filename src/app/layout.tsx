@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
+import { env } from "@/lib/env";
 import "./globals.css";
 
 const inter = Inter({
@@ -16,10 +17,10 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://melodya.app"),
+  metadataBase: new URL(env.siteUrl),
   title: {
-    default: "Melodya — Transforme tes mots en chanson personnalisée",
-    template: "%s · Melodya",
+    default: "Muzikii — Transforme tes mots en chanson personnalisée",
+    template: "%s · Muzikii",
   },
   description:
     "Anniversaire, mariage, dot, hommage… Raconte ton histoire, notre IA écrit les paroles et compose ta chanson sur-mesure. Prête à télécharger en 24h. Paiement Mobile Money via Moneroo.",
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
     "Afrique",
   ],
   openGraph: {
-    title: "Melodya — Transforme tes mots en chanson personnalisée",
+    title: "Muzikii — Transforme tes mots en chanson personnalisée",
     description:
       "Raconte ton histoire, notre IA écrit et compose ta chanson. Prête à télécharger en 24h.",
     type: "website",

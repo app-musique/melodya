@@ -310,7 +310,7 @@ export default async function Home() {
           <div className="mx-auto max-w-6xl px-5">
             <header className="max-w-2xl">
               <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Ils l&apos;ont créée avec Melodya
+                Ils l&apos;ont créée avec Muzikii
               </h2>
               <p className="mt-3 text-ink-soft">
                 Des chansons pensées pour un seul moment, une seule personne.
@@ -509,14 +509,14 @@ export default async function Home() {
             <a href="#" className="text-ink-soft hover:text-ink">
               Conditions d&apos;utilisation
             </a>
-            <a href="#" className="text-ink-soft hover:text-ink">
-              contact@melodya.app
+            <a href="mailto:contact@muzikii.com" className="text-ink-soft hover:text-ink">
+              contact@muzikii.com
             </a>
           </div>
         </div>
         <div className="border-t border-line">
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-5 text-xs text-ink-soft sm:flex-row">
-            <span>© 2026 Melodya. Tous droits réservés.</span>
+            <span>© 2026 Muzikii. Tous droits réservés.</span>
             <span className="flex flex-wrap gap-x-4 gap-y-1">
               {paymentMethods.map((m) => (
                 <span key={m}>{m}</span>

@@ -1,4 +1,4 @@
-# Configuration Supabase — Melodya
+# Configuration Supabase — Muzikii
 
 Supabase est la **seule dépendance externe obligatoire** pour lancer l'app en local
 (paroles, musique et paiement tournent en mode simulé tant que leurs clés ne sont pas fournies).
