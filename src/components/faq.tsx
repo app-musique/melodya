@@ -22,7 +22,7 @@ const items = [
   },
   {
     q: "Comment et en combien de temps je reçois ma chanson ?",
-    a: "Ta chanson est prête sous 24h. Tu la retrouves dans ton espace personnel et tu reçois un email quand elle est disponible : MP3 haute qualité, pochette et 2 versions au choix, le tout téléchargeable.",
+    a: "Ta chanson est prête en quelques minutes. Tu la retrouves dans ton espace personnel et tu reçois un email quand elle est disponible : MP3 haute qualité, pochette et 2 versions au choix, le tout téléchargeable.",
   },
   {
     q: "Comment ça marche, les crédits ?",
@@ -34,7 +34,7 @@ const items = [
   },
   {
     q: "Puis-je demander des modifications ?",
-    a: "Oui. Tu peux ajuster les paroles avant la composition, et demander une correction après livraison si un détail ne va pas (prénom mal prononcé, couplet à revoir).",
+    a: "Oui. Tu ajustes les paroles librement avant la composition, et si le résultat ne te convient pas tu peux relancer une génération (1 offerte).",
   },
   {
     q: "À qui appartient la chanson ?",

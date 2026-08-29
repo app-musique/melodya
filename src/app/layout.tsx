@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: "%s · Muzikii",
   },
   description:
-    "Anniversaire, mariage, dot, hommage… Raconte ton histoire, notre IA écrit les paroles et compose ta chanson sur-mesure. Prête à télécharger en 24h. Paiement Mobile Money via Moneroo.",
+    "Anniversaire, mariage, dot, hommage… Raconte ton histoire, notre IA écrit les paroles et compose ta chanson sur-mesure. Prête en quelques minutes. Paiement Mobile Money via Moneroo.",
   keywords: [
     "chanson personnalisée",
     "musique IA",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Muzikii — Transforme tes mots en chanson personnalisée",
     description:
-      "Raconte ton histoire, notre IA écrit et compose ta chanson. Prête à télécharger en 24h.",
+      "Raconte ton histoire, notre IA écrit et compose ta chanson. Prête en quelques minutes.",
     type: "website",
     locale: "fr_FR",
   },

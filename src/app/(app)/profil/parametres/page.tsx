@@ -17,7 +17,8 @@ export default async function ParametresPage() {
     { icon: Globe, label: "Langue", value: "Français", soon: true },
     { icon: Shield, label: "Confidentialité des créations", value: "Privé par défaut", soon: true },
     { icon: LifeBuoy, label: "Aide & support", value: "FAQ et contact", href: "/#faq" },
-    { icon: FileText, label: "Conditions d'utilisation", value: "", href: "/#" },
+    { icon: FileText, label: "Conditions d'utilisation", value: "", href: "/cgu" },
+    { icon: FileText, label: "Politique de confidentialité", value: "", href: "/confidentialite" },
   ];
 
   return (
