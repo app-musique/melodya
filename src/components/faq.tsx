@@ -22,11 +22,15 @@ const items = [
   },
   {
     q: "Comment et en combien de temps je reçois ma chanson ?",
-    a: "Ta chanson est prête sous 24h. Tu la retrouves dans ton espace personnel et tu reçois un email quand elle est disponible : MP3 haute qualité, pochette et clip lyrics téléchargeables. Option express 6h disponible.",
+    a: "Ta chanson est prête sous 24h. Tu la retrouves dans ton espace personnel et tu reçois un email quand elle est disponible : MP3 haute qualité, pochette et 3 versions au choix, le tout téléchargeable.",
+  },
+  {
+    q: "Comment ça marche, les crédits ?",
+    a: "Tu achètes un pack de crédits (paiement unique) et 1 chanson = 1 crédit. Tes crédits n'expirent jamais et tu peux les utiliser quand tu veux, pour autant de chansons que tu veux.",
   },
   {
     q: "Quels moyens de paiement acceptez-vous ?",
-    a: "Le paiement est géré de façon sécurisée par Moneroo : Orange Money, MTN Mobile Money, Moov Money, Wave, M-Pesa, Airtel Money et carte bancaire, dans la plupart des pays d'Afrique. Le paiement se fait en une fois, sans abonnement.",
+    a: "Le paiement est géré de façon sécurisée par Moneroo : Orange Money, MTN Mobile Money, Moov Money, Wave, M-Pesa, Airtel Money et carte bancaire, dans la plupart des pays d'Afrique.",
   },
   {
     q: "Puis-je demander des modifications ?",

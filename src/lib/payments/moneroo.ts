@@ -5,10 +5,11 @@ import { env, isMockPayments } from "@/lib/env";
 const MONEROO_API = "https://api.moneroo.io/v1";
 
 export type InitPaymentInput = {
-  songId: string;
+  paymentId: string;
   amount: number;
   currency: string;
   description: string;
+  returnUrl: string;
   customer: { email: string; firstName?: string; lastName?: string };
 };
 
@@ -22,8 +23,8 @@ export type InitPaymentResult = {
 export async function initializePayment(input: InitPaymentInput): Promise<InitPaymentResult> {
   if (isMockPayments) {
     return {
-      reference: `mock_${input.songId}`,
-      checkoutUrl: `${env.siteUrl}/commander/${input.songId}/paiement?mock=1`,
+      reference: `mock_${input.paymentId}`,
+      checkoutUrl: input.returnUrl,
       mock: true,
     };
   }
@@ -44,8 +45,8 @@ export async function initializePayment(input: InitPaymentInput): Promise<InitPa
         first_name: input.customer.firstName || "Client",
         last_name: input.customer.lastName || "Melodya",
       },
-      return_url: `${env.siteUrl}/commander/${input.songId}/paiement`,
-      metadata: { song_id: input.songId },
+      return_url: input.returnUrl,
+      metadata: { payment_id: input.paymentId },
     }),
   });
 

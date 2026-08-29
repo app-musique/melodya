@@ -1,5 +1,5 @@
 import { apiError, json, requireUser } from "@/lib/api";
-import { getOwnedSong, recomputePrice, updateDraft } from "@/lib/songs";
+import { getOwnedSong, updateDraft } from "@/lib/songs";
 import { songDraftPatch } from "@/lib/schemas";
 
 type Params = { params: Promise<{ id: string }> };
@@ -20,7 +20,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const existing = await getOwnedSong(id);
   if (!existing) return apiError("Chanson introuvable", 404);
-  if (!["draft", "pending_payment"].includes(existing.status)) {
+  if (existing.status !== "draft") {
     return apiError("Cette commande n'est plus modifiable", 409);
   }
 
@@ -53,10 +53,6 @@ export async function PATCH(req: Request, { params }: Params) {
   ];
   if (briefKeys.some((k) => k in patch)) {
     patch.lyrics_approved = patch.lyrics_approved ?? false;
-  }
-
-  if ("addons" in patch) {
-    patch.price_total = recomputePrice({ ...existing, addons: parsed.data.addons ?? [] });
   }
 
   try {
