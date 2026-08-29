@@ -1,7 +1,7 @@
 import type { SystemHealth } from "@/lib/admin";
 import type { AppError } from "@/lib/domain";
 
-const REAL = new Set(["suno", "claude", "moneroo", "resend"]);
+const REAL = new Set(["suno", "claude", "moneroo", "brevo"]);
 
 function Badge({ value }: { value: string }) {
   const real = REAL.has(value);
