@@ -33,8 +33,21 @@ export default async function ExplorerPage({ searchParams }: Props) {
     );
   };
 
+  const filters = (
+    <div className="space-y-2">
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {chip("Toutes occasions", "occasion", "", !occasion)}
+        {occasions.map((o) => chip(o, "occasion", o, occasion === o))}
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {chip("Tous styles", "style", "", !style)}
+        {MUSIC_STYLES.map((s) => chip(s, "style", s, style === s))}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 py-8 sm:py-10">
+    <div className="mx-auto w-full max-w-5xl px-5 py-6 sm:py-8">
       <div className="flex items-center gap-2">
         <Compass className="size-6 text-brand-strong" />
         <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">Explorer</h1>
@@ -43,23 +56,15 @@ export default async function ExplorerPage({ searchParams }: Props) {
         Des chansons pour t&apos;inspirer. Écoute, puis lance ta création avec le même style.
       </p>
 
-      <div className="mt-6 space-y-2">
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {chip("Toutes occasions", "occasion", "", !occasion)}
-          {occasions.map((o) => chip(o, "occasion", o, occasion === o))}
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {chip("Tous styles", "style", "", !style)}
-          {MUSIC_STYLES.map((s) => chip(s, "style", s, style === s))}
-        </div>
-      </div>
-
       {items.length === 0 ? (
-        <div className="mt-10 rounded-3xl border border-dashed border-line bg-white p-10 text-center text-sm text-ink-soft">
-          Rien ici pour ce filtre. Essaie une autre occasion ou un autre style.
-        </div>
+        <>
+          <div className="mt-6">{filters}</div>
+          <div className="mt-10 rounded-3xl border border-dashed border-line bg-white p-10 text-center text-sm text-ink-soft">
+            Rien ici pour ce filtre. Essaie une autre occasion ou un autre style.
+          </div>
+        </>
       ) : (
-        <ExploreGallery items={items} />
+        <ExploreGallery items={items} filters={filters} />
       )}
     </div>
   );

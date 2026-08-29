@@ -19,6 +19,10 @@ export type ExploreItem = {
   durationSec: number | null;
   creatorName: string | null;
   creatorHandle: string | null;
+  /** Média pour le mode immersif (feed). */
+  audioUrl: string | null;
+  lyrics: string | null;
+  timing: LyricsTiming | null;
 };
 
 export type ExploreDetail = ExploreItem & {
@@ -40,6 +44,7 @@ type ItemExtras = {
   durationSec?: number | null;
   creatorName?: string | null;
   creatorHandle?: string | null;
+  audioUrl?: string | null;
 };
 
 function toItem(s: Record<string, unknown>, extras: ItemExtras = {}): ExploreItem {
@@ -63,6 +68,9 @@ function toItem(s: Record<string, unknown>, extras: ItemExtras = {}): ExploreIte
     durationSec: extras.durationSec ?? null,
     creatorName: extras.creatorName ?? null,
     creatorHandle: extras.creatorHandle ?? null,
+    audioUrl: extras.audioUrl ?? null,
+    lyrics: song.lyrics,
+    timing: song.lyrics_timing,
   };
 }
 
@@ -94,7 +102,7 @@ export async function listExplore(filter?: {
     ids.length
       ? admin
           .from("song_versions")
-          .select("song_id, duration_sec, is_selected, idx")
+          .select("song_id, audio_url, duration_sec, is_selected, idx")
           .in("song_id", ids)
           .order("idx")
       : Promise.resolve({ data: [] }),
@@ -103,14 +111,15 @@ export async function listExplore(filter?: {
       : Promise.resolve({ data: [] }),
   ]);
 
-  const durationBySong = new Map<string, number | null>();
+  const mediaBySong = new Map<string, { audio: string | null; dur: number | null }>();
   for (const v of (versions.data as {
     song_id: string;
+    audio_url: string | null;
     duration_sec: number | null;
     is_selected: boolean;
   }[]) ?? []) {
-    if (!durationBySong.has(v.song_id) || v.is_selected) {
-      durationBySong.set(v.song_id, v.duration_sec);
+    if (!mediaBySong.has(v.song_id) || v.is_selected) {
+      mediaBySong.set(v.song_id, { audio: v.audio_url, dur: v.duration_sec });
     }
   }
   const profById = new Map(
@@ -121,9 +130,11 @@ export async function listExplore(filter?: {
 
   return rows.map((r) => {
     const prof = profById.get(String(r.user_id));
+    const media = mediaBySong.get(String(r.id));
     return toItem(r, {
       reactions: totals.get(String(r.id)) ?? 0,
-      durationSec: durationBySong.get(String(r.id)) ?? null,
+      durationSec: media?.dur ?? null,
+      audioUrl: media?.audio ?? null,
       creatorName: prof?.full_name ?? null,
       creatorHandle: prof?.handle ?? null,
     });

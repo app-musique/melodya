@@ -7,6 +7,7 @@ import { Logo } from "@/components/logo";
 import { SyncedLyrics } from "@/components/explore/synced-lyrics";
 import { Cover } from "@/components/explore/cover";
 import { FollowButton } from "@/components/creator/follow-button";
+import { reactorKey } from "@/lib/reactor-key";
 import { REACTION_EMOJIS } from "@/lib/domain";
 import type { ExploreDetail } from "@/lib/explore";
 import type { CreatorMini } from "@/lib/follows";
@@ -15,21 +16,6 @@ function fmt(s: number) {
   if (!Number.isFinite(s)) return "0:00";
   const m = Math.floor(s / 60);
   return `${m}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
-}
-
-/** Identifiant d'auditeur, stable par navigateur (anti double-comptage). */
-function reactorKey(): string {
-  try {
-    const k = "muzikii_rid";
-    let v = localStorage.getItem(k);
-    if (!v || !/^[A-Za-z0-9_-]{8,64}$/.test(v)) {
-      v = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40);
-      localStorage.setItem(k, v);
-    }
-    return v;
-  } catch {
-    return `anon-${Math.random().toString(36).slice(2, 12)}`;
-  }
 }
 
 export function InspirationView({
