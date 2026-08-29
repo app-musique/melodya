@@ -7,6 +7,7 @@ import { generateLyrics } from "@/lib/lyrics";
 import { CURRENCY } from "@/lib/pricing";
 import { getCreditsPerSong, grantCredits, spendCreditForSong } from "@/lib/credits";
 import { notify } from "@/lib/notifications";
+import { sendSongReadyEmail } from "@/lib/email";
 import { persistAudio } from "@/lib/media";
 import type { GiftReaction, Song, SongVersion, SongAsset } from "@/lib/domain";
 import { env } from "@/lib/env";
@@ -348,13 +349,19 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     }
   }
 
-  await notify((claimed as Song).user_id, {
+  const createdNotif = await notify((claimed as Song).user_id, {
     type: "song_ready",
     title: "Ta chanson est prête 🎉",
     body: `${(claimed as Song).recipient_name ?? "Ta chanson"} — écoute les versions et choisis ta préférée.`,
     link: `/mes-chansons/${songId}`,
     dedupeKey: `song_ready:${songId}`,
   });
+  if (createdNotif) {
+    await sendSongReadyEmail((claimed as Song).user_id, {
+      recipientName: (claimed as Song).recipient_name ?? "",
+      songId,
+    }).catch(() => {});
+  }
 
   return claimed as Song;
 }

@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import type { AppNotification, NotificationType } from "@/lib/domain";
 import { upcomingOccasions } from "@/lib/occasions";
+import { sendOccasionReminderEmail } from "@/lib/email";
 
 type NotifyInput = {
   type: NotificationType;
@@ -12,11 +13,15 @@ type NotifyInput = {
   dedupeKey?: string;
 };
 
-/** Crée une notification (idempotent si dedupeKey fourni). */
-export async function notify(userId: string, n: NotifyInput): Promise<void> {
+/**
+ * Crée une notification (idempotent si dedupeKey fourni).
+ * Renvoie `true` si une notification a réellement été créée (utile pour n'envoyer
+ * un email qu'une fois).
+ */
+export async function notify(userId: string, n: NotifyInput): Promise<boolean> {
   const admin = createAdminClient();
   if (n.dedupeKey) {
-    await admin
+    const { data } = await admin
       .from("notifications")
       .upsert(
         {
@@ -28,8 +33,9 @@ export async function notify(userId: string, n: NotifyInput): Promise<void> {
           dedupe_key: n.dedupeKey,
         },
         { onConflict: "user_id,dedupe_key", ignoreDuplicates: true },
-      );
-    return;
+      )
+      .select("id");
+    return (data?.length ?? 0) > 0;
   }
   await admin.from("notifications").insert({
     user_id: userId,
@@ -38,6 +44,7 @@ export async function notify(userId: string, n: NotifyInput): Promise<void> {
     body: n.body ?? null,
     link: n.link ?? null,
   });
+  return true;
 }
 
 export async function listNotifications(userId: string, limit = 30): Promise<AppNotification[]> {
@@ -75,17 +82,26 @@ export async function syncOccasionNotifications(userId: string): Promise<void> {
   for (const o of soon) {
     if (o.daysUntil > o.notify_days_before || o.daysUntil < 0) continue;
     const who = o.person_name ? ` de ${o.person_name}` : "";
-    await notify(userId, {
+    const link = `/commander?occasion=${encodeURIComponent(o.label)}${
+      o.person_name ? `&recipient=${encodeURIComponent(o.person_name)}` : ""
+    }`;
+    const created = await notify(userId, {
       type: "occasion_soon",
       title: `${o.label}${who}`,
       body:
         o.daysUntil === 0
           ? "C'est aujourd'hui ! Il est encore temps de créer une chanson."
           : `Dans ${o.daysUntil} jour${o.daysUntil > 1 ? "s" : ""}. Crée une chanson à l'avance.`,
-      link: `/commander?occasion=${encodeURIComponent(o.label)}${
-        o.person_name ? `&recipient=${encodeURIComponent(o.person_name)}` : ""
-      }`,
+      link,
       dedupeKey: `occasion:${o.id}:${year}`,
     });
+    if (created) {
+      await sendOccasionReminderEmail(userId, {
+        label: o.label,
+        personName: o.person_name,
+        daysUntil: o.daysUntil,
+        link,
+      }).catch(() => {});
+    }
   }
 }

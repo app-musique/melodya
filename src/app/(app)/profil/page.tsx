@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, Coins, Gift, Music4, Settings } from "lucide-react";
+import { ArrowRight, Coins, Music4, Settings, Sparkles } from "lucide-react";
+import { ReferralCard } from "@/components/profile/referral-card";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getCurrentProfile, listTransactions } from "@/lib/credits";
+import { getUserLoyalty } from "@/lib/loyalty";
+import { getReferralStats } from "@/lib/referral";
 import { listSongs } from "@/lib/songs";
+import { env } from "@/lib/env";
 import type { CreditTransaction } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Profil", robots: { index: false } };
@@ -22,11 +26,25 @@ export default async function ProfilPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
 
-  const [profile, songs, txns] = await Promise.all([
+  const [profile, songs, txns, loyalty, referral] = await Promise.all([
     getCurrentProfile(),
     listSongs(),
     listTransactions(user.id),
+    getUserLoyalty(user.id),
+    getReferralStats(user.id),
   ]);
+
+  const loyaltyProgress =
+    loyalty.tier && loyalty.nextTier
+      ? Math.min(
+          100,
+          Math.round(
+            ((loyalty.songCount - loyalty.tier.min_songs) /
+              Math.max(1, loyalty.nextTier.min_songs - loyalty.tier.min_songs)) *
+              100,
+          ),
+        )
+      : 100;
 
   const memberSince = profile?.created_at
     ? new Date(profile.created_at).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
@@ -75,11 +93,45 @@ export default async function ProfilPage() {
         </Link>
       </div>
 
-      <div className="mt-3 space-y-2">
-        <div className="flex items-center gap-3 rounded-2xl border border-dashed border-line bg-white p-4 text-sm text-ink-soft">
-          <Gift className="size-4 shrink-0 text-brand-strong" />
-          Offrir des crédits à un proche — <span className="text-ink-soft/70">bientôt</span>
-        </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {loyalty.tier && (
+          <div className="rounded-2xl border border-line bg-white p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Sparkles className="size-4 text-brand-strong" />
+              Palier {loyalty.tier.name}
+            </div>
+            <p className="mt-1 text-sm text-ink-soft">
+              {loyalty.discountPct > 0
+                ? `−${loyalty.discountPct}% sur les packs de crédits`
+                : "Aucune remise pour l'instant"}
+            </p>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-cream-deep">
+              <div
+                className="h-full rounded-full gradient-brand"
+                style={{ width: `${loyaltyProgress}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-ink-soft">
+              {loyalty.nextTier
+                ? `Encore ${loyalty.songsToNext} chanson${
+                    loyalty.songsToNext > 1 ? "s" : ""
+                  } pour ${loyalty.nextTier.name} (−${loyalty.nextTier.discount_pct}%)`
+                : "Palier maximum atteint 🎉"}
+            </p>
+          </div>
+        )}
+
+        {profile?.referral_code && (
+          <ReferralCard
+            code={profile.referral_code}
+            siteUrl={env.siteUrl}
+            filleuls={referral.filleuls}
+            credits={referral.credits}
+          />
+        )}
+      </div>
+
+      <div className="mt-3">
         <Link
           href="/profil/parametres"
           className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4 text-sm font-medium hover:bg-cream-deep"

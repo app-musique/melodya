@@ -17,8 +17,17 @@ type Props = {
 };
 
 export default async function CommanderPage({ searchParams }: Props) {
+  const { inspire, occasion, recipient } = await searchParams;
+
   const user = await getCurrentUser();
-  if (!user) redirect("/connexion?next=/commander");
+  if (!user) {
+    const qs = new URLSearchParams();
+    if (inspire) qs.set("inspire", inspire);
+    if (occasion) qs.set("occasion", occasion);
+    if (recipient) qs.set("recipient", recipient);
+    const suffix = qs.toString() ? `?${qs}` : "";
+    redirect(`/connexion?next=${encodeURIComponent(`/commander${suffix}`)}`);
+  }
 
   const song = await createDraft();
   if (song.status !== "draft") {
@@ -26,7 +35,6 @@ export default async function CommanderPage({ searchParams }: Props) {
   }
 
   // Pré-remplissage (occasion / destinataire / inspiration d'une chanson vitrine).
-  const { inspire, occasion, recipient } = await searchParams;
   const patch: Record<string, unknown> = {};
   if (occasion && !song.occasion) patch.occasion = occasion.slice(0, 60);
   if (recipient && !song.recipient_name) patch.recipient_name = recipient.slice(0, 80);

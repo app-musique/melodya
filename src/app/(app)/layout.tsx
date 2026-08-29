@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app/app-shell";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/credits";
-import { syncOccasionNotifications, unreadCount } from "@/lib/notifications";
+import { unreadCount } from "@/lib/notifications";
+import { onAppEnter } from "@/lib/app-enter";
 import { isSupabaseConfigured } from "@/lib/env";
 import type { Profile } from "@/lib/domain";
 
@@ -13,8 +14,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
 
-  // Génère les rappels d'occasions AVANT de compter les non-lues (badge à jour).
-  await syncOccasionNotifications(user.id).catch(() => {});
+  // Rappels d'occasions, rattachement parrainage, email de bienvenue —
+  // AVANT de compter les non-lues (badge à jour).
+  await onAppEnter(user.id).catch(() => {});
 
   const [profileData, unread] = await Promise.all([
     getCurrentProfile(),
@@ -28,6 +30,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     country: null,
     is_admin: false,
     credit_balance: 0,
+    referral_code: null,
+    referred_by: null,
+    referral_rewarded: false,
+    email_notifications: true,
+    welcomed_at: null,
     created_at: "",
     updated_at: "",
   };

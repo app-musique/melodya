@@ -88,6 +88,7 @@ export type Song = {
   gift_view_count: number;
   inspire_count: number;
   lyrics_timing: LyricsTiming | null;
+  clip_dedication: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -113,6 +114,14 @@ export type SongAsset = {
   created_at: string;
 };
 
+export type SongPhoto = {
+  id: string;
+  song_id: string;
+  url: string;
+  sort_order: number;
+  created_at: string;
+};
+
 export type Profile = {
   id: string;
   full_name: string | null;
@@ -120,8 +129,21 @@ export type Profile = {
   country: string | null;
   is_admin: boolean;
   credit_balance: number;
+  referral_code: string | null;
+  referred_by: string | null;
+  referral_rewarded: boolean;
+  email_notifications: boolean;
+  welcomed_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type LoyaltyTier = {
+  id: string;
+  name: string;
+  min_songs: number;
+  discount_pct: number;
+  sort_order: number;
 };
 
 export type CreditPack = {
