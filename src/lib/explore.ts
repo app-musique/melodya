@@ -14,6 +14,9 @@ export type ExploreItem = {
   plays: number;
   reactions: number;
   isShowcase: boolean;
+  durationSec: number | null;
+  creatorName: string | null;
+  creatorHandle: string | null;
 };
 
 export type ExploreDetail = ExploreItem & {
@@ -30,7 +33,14 @@ export type ExploreDetail = ExploreItem & {
 const SELECT =
   "id,user_id,is_showcase,shared_with_followers,showcase_title,showcase_artist,sender_name,recipient_name,occasion,music_style,mood,voice,language,lyrics,lyrics_timing,plays_count,status,is_public";
 
-function toItem(s: Record<string, unknown>, reactions = 0): ExploreItem {
+type ItemExtras = {
+  reactions?: number;
+  durationSec?: number | null;
+  creatorName?: string | null;
+  creatorHandle?: string | null;
+};
+
+function toItem(s: Record<string, unknown>, extras: ItemExtras = {}): ExploreItem {
   const song = s as unknown as Song;
   // Chanson partagée avec des abonnés (pas une vitrine) : on n'expose jamais le
   // prénom réel du destinataire — titre neutre basé sur l'occasion.
@@ -45,8 +55,11 @@ function toItem(s: Record<string, unknown>, reactions = 0): ExploreItem {
     style: song.music_style,
     cover: `${env.siteUrl}/api/cover/${song.id}`,
     plays: song.plays_count ?? 0,
-    reactions,
+    reactions: extras.reactions ?? 0,
     isShowcase: song.is_showcase,
+    durationSec: extras.durationSec ?? null,
+    creatorName: extras.creatorName ?? null,
+    creatorHandle: extras.creatorHandle ?? null,
   };
 }
 
@@ -70,8 +83,48 @@ export async function listExplore(filter?: {
 
   const { data } = await q;
   const rows = (data as Record<string, unknown>[]) ?? [];
-  const totals = await reactionTotals(rows.map((r) => String(r.id)));
-  return rows.map((r) => toItem(r, totals.get(String(r.id)) ?? 0));
+  const ids = rows.map((r) => String(r.id));
+  const userIds = [...new Set(rows.map((r) => String(r.user_id)))];
+
+  const [totals, versions, profiles] = await Promise.all([
+    reactionTotals(ids),
+    ids.length
+      ? admin
+          .from("song_versions")
+          .select("song_id, duration_sec, is_selected, idx")
+          .in("song_id", ids)
+          .order("idx")
+      : Promise.resolve({ data: [] }),
+    userIds.length
+      ? admin.from("profiles").select("id, full_name, handle").in("id", userIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const durationBySong = new Map<string, number | null>();
+  for (const v of (versions.data as {
+    song_id: string;
+    duration_sec: number | null;
+    is_selected: boolean;
+  }[]) ?? []) {
+    if (!durationBySong.has(v.song_id) || v.is_selected) {
+      durationBySong.set(v.song_id, v.duration_sec);
+    }
+  }
+  const profById = new Map(
+    ((profiles.data as { id: string; full_name: string | null; handle: string | null }[]) ?? []).map(
+      (p) => [p.id, p],
+    ),
+  );
+
+  return rows.map((r) => {
+    const prof = profById.get(String(r.user_id));
+    return toItem(r, {
+      reactions: totals.get(String(r.id)) ?? 0,
+      durationSec: durationBySong.get(String(r.id)) ?? null,
+      creatorName: prof?.full_name ?? null,
+      creatorHandle: prof?.handle ?? null,
+    });
+  });
 }
 
 export async function getExploreSong(id: string): Promise<ExploreDetail | null> {
@@ -84,15 +137,24 @@ export async function getExploreSong(id: string): Promise<ExploreDetail | null> 
 
   const { data: version } = await admin
     .from("song_versions")
-    .select("audio_url")
+    .select("audio_url, duration_sec")
     .eq("song_id", id)
     .eq("is_selected", true)
     .maybeSingle();
 
-  const summary = await reactionSummary(id);
+  const [summary, { data: prof }] = await Promise.all([
+    reactionSummary(id),
+    admin.from("profiles").select("full_name, handle").eq("id", s.user_id).maybeSingle(),
+  ]);
+  const p = prof as { full_name: string | null; handle: string | null } | null;
 
   return {
-    ...toItem(data as Record<string, unknown>, summary.total),
+    ...toItem(data as Record<string, unknown>, {
+      reactions: summary.total,
+      durationSec: (version as { duration_sec?: number | null } | null)?.duration_sec ?? null,
+      creatorName: p?.full_name ?? null,
+      creatorHandle: p?.handle ?? null,
+    }),
     audioUrl: (version as { audio_url: string } | null)?.audio_url ?? null,
     lyrics: s.lyrics,
     timing: s.lyrics_timing,
