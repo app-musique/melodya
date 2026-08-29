@@ -220,3 +220,5 @@ export const STATUS_LABEL: Record<SongStatus, string> = {
 };
 
 export const MAX_REGENERATIONS = 3;
+
+export const MAX_CLIP_PHOTOS = 6;

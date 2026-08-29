@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight, Clapperboard } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { GiftReactions } from "@/components/gift/gift-reactions";
 import { GiftViewTracker } from "@/components/gift/gift-view-tracker";
@@ -34,6 +35,12 @@ export default async function GiftPage({ params }: Props) {
   if (!gift) notFound();
 
   const { song, version } = gift;
+
+  const createParams = new URLSearchParams();
+  if (gift.ownerReferralCode) createParams.set("ref", gift.ownerReferralCode);
+  createParams.set("inspire", song.id);
+  if (song.occasion) createParams.set("occasion", song.occasion);
+  const createHref = `/commander?${createParams.toString()}`;
 
   return (
     <div className="flex min-h-dvh flex-col bg-plum text-cream">
@@ -71,6 +78,16 @@ export default async function GiftPage({ params }: Props) {
           )}
         </div>
 
+        {version && (
+          <Link
+            href={`/cadeau/${slug}/clip`}
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-white/5"
+          >
+            <Clapperboard className="size-4 text-gold" />
+            Voir en clip vidéo
+          </Link>
+        )}
+
         {song.lyrics && (
           <pre className="mt-8 whitespace-pre-wrap text-left font-sans text-sm leading-relaxed text-cream/80">
             {song.lyrics}
@@ -79,7 +96,21 @@ export default async function GiftPage({ params }: Props) {
 
         <GiftReactions slug={slug} initial={gift.reactions} />
 
-        <div className="mt-12 border-t border-white/10 pt-6 text-sm text-cream/60">
+        <div className="mt-12 rounded-3xl border border-gold/30 bg-white/5 p-6 text-center">
+          <p className="font-display text-xl font-bold">Touché ? Crée la tienne.</p>
+          <p className="mt-1 text-sm text-cream/70">
+            Une chanson personnalisée pour quelqu&apos;un que tu aimes, en quelques minutes.
+          </p>
+          <Link
+            href={createHref}
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-bold text-plum"
+          >
+            Créer ma chanson
+            <ArrowRight className="size-4" />
+          </Link>
+        </div>
+
+        <div className="mt-8 border-t border-white/10 pt-6 text-sm text-cream/60">
           Créée avec{" "}
           <Link href="/" className="font-semibold text-gold">
             Melodya

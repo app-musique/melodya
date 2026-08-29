@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import type { LyricsTiming } from "@/lib/domain";
-
-type Line = { text: string; isSection: boolean; t: number | null };
+import { activeLineIndex, parseLyricLines } from "@/lib/lyrics-sync";
 
 /** Paroles qui défilent et se surlignent au fil de la lecture. */
 export function SyncedLyrics({
@@ -20,41 +19,15 @@ export function SyncedLyrics({
   const containerRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLParagraphElement>(null);
 
-  const lines: Line[] = useMemo(() => {
-    const raw = lyrics
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
+  const lines = useMemo(
+    () => parseLyricLines(lyrics, timing, duration),
+    [lyrics, timing, duration],
+  );
 
-    const parsed: Line[] = raw.map((text) => ({
-      text: text.replace(/^\[|\]$/g, ""),
-      isSection: /^\[.*\]$/.test(text),
-      t: null as number | null,
-    }));
-
-    const lyricLines = parsed.filter((l) => !l.isSection);
-
-    if (timing && timing.length) {
-      // Aligne le timing sur les lignes de paroles (ignore les balises de section).
-      lyricLines.forEach((l, i) => {
-        l.t = timing[i]?.t ?? null;
-      });
-    } else if (duration > 0 && lyricLines.length > 0) {
-      const step = duration / (lyricLines.length + 1);
-      lyricLines.forEach((l, i) => {
-        l.t = step * (i + 1);
-      });
-    }
-    return parsed;
-  }, [lyrics, timing, duration]);
-
-  const activeIndex = useMemo(() => {
-    let idx = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].t !== null && (lines[i].t as number) <= currentTime + 0.15) idx = i;
-    }
-    return idx;
-  }, [lines, currentTime]);
+  const activeIndex = useMemo(
+    () => activeLineIndex(lines, currentTime),
+    [lines, currentTime],
+  );
 
   useEffect(() => {
     const el = activeRef.current;

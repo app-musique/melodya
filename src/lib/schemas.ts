@@ -123,3 +123,9 @@ export const profilePrefsSchema = z
     email_notifications: z.boolean(),
   })
   .partial();
+
+// --- Studio clip ---
+
+export const clipDedicationSchema = z.object({
+  dedication: z.string().trim().max(300),
+});
