@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function ConnexionPage() {
   if (isSupabaseConfigured) {
     const user = await getCurrentUser();
-    if (user) redirect("/mes-chansons");
+    if (user) redirect("/tableau-de-bord");
   }
 
   return (

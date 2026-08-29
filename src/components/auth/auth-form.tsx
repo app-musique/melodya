@@ -10,7 +10,7 @@ type Mode = "login" | "signup";
 export function AuthForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/mes-chansons";
+  const next = params.get("next") || "/tableau-de-bord";
 
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");

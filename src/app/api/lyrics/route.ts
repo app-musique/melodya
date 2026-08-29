@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
   const song = await getOwnedSong(parsed.data.songId);
   if (!song) return apiError("Chanson introuvable", 404);
-  if (!["draft", "pending_payment"].includes(song.status)) {
+  if (song.status !== "draft") {
     return apiError("Cette commande n'est plus modifiable", 409);
   }
   if (!song.story || song.story.trim().length < 20) {

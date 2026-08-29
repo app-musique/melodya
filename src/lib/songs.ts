@@ -4,7 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getMusicProvider } from "@/lib/music";
 import { generateLyrics } from "@/lib/lyrics";
-import { computeTotal, CURRENCY } from "@/lib/pricing";
+import { CURRENCY } from "@/lib/pricing";
+import { getCreditsPerSong, spendCreditForSong } from "@/lib/credits";
 import type { Song, SongVersion, SongAsset } from "@/lib/domain";
 import { env } from "@/lib/env";
 
@@ -83,7 +84,7 @@ export async function updateDraft(
     .from("songs")
     .update(patch)
     .eq("id", id)
-    .in("status", ["draft", "pending_payment"])
+    .eq("status", "draft")
     .select("*")
     .single();
   if (error) throw error;
@@ -129,21 +130,53 @@ export async function setShare(songId: string, isPublic: boolean): Promise<strin
 }
 
 // ------------------------------------------------------------------
-// Orchestration (service role — appelé par webhook / polling)
+// Lancement d'une chanson : débite 1 crédit puis génère
 // ------------------------------------------------------------------
 
-export async function markPaid(songId: string): Promise<void> {
+export type CreateResult =
+  | { ok: true }
+  | { ok: false; reason: "insufficient" | "not_ready" | "error"; message?: string };
+
+export async function createSongFromCredits(songId: string): Promise<CreateResult> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, reason: "error", message: "Non authentifié" };
+
+  const { data: song } = await supabase.from("songs").select("*").eq("id", songId).maybeSingle();
+  if (!song) return { ok: false, reason: "error", message: "Chanson introuvable" };
+  const s = song as Song;
+
+  if (s.status !== "draft") return { ok: true }; // déjà lancée
+  if (!s.lyrics_approved) return { ok: false, reason: "not_ready" };
+
+  const cost = await getCreditsPerSong();
   const admin = createAdminClient();
-  // Transition atomique pending_payment|draft -> paid (idempotent si déjà avancé).
+
+  // Réserve la chanson (atomique) avant de dépenser, pour éviter le double débit.
   const { data: claimed } = await admin
     .from("songs")
-    .update({ status: "paid" })
+    .update({ status: "paid", credits_cost: cost })
     .eq("id", songId)
-    .in("status", ["draft", "pending_payment"])
+    .eq("status", "draft")
     .select("id")
     .maybeSingle();
-  if (!claimed) return; // déjà payée / en génération / prête
+  if (!claimed) return { ok: true };
+
+  const spend = await spendCreditForSong(user.id, songId, cost);
+  if (!spend.ok) {
+    // Remet en brouillon : l'utilisateur pourra acheter des crédits et réessayer.
+    await admin.from("songs").update({ status: "draft" }).eq("id", songId).eq("status", "paid");
+    return {
+      ok: false,
+      reason: spend.reason === "insufficient" ? "insufficient" : "error",
+      message: spend.message,
+    };
+  }
+
   await startGeneration(songId);
+  return { ok: true };
 }
 
 export async function startGeneration(songId: string): Promise<void> {
@@ -263,10 +296,6 @@ export async function advanceGeneration(songId: string): Promise<Song> {
   });
 
   return claimed as Song;
-}
-
-export function recomputePrice(song: Pick<Song, "addons">): number {
-  return computeTotal(song.addons ?? []);
 }
 
 /** Lecture publique pour la page cadeau (bypass RLS, filtré). */

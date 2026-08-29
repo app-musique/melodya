@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, LogOut, Music2 } from "lucide-react";
+import { ChevronDown, Home, LogOut, Music2, UserRound } from "lucide-react";
 
 export function AccountNav({ email }: { email: string }) {
   const [open, setOpen] = useState(false);
@@ -38,12 +38,28 @@ export function AccountNav({ email }: { email: string }) {
             <p className="truncate text-sm font-semibold">{email}</p>
           </div>
           <Link
+            href="/tableau-de-bord"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 px-4 py-3 text-sm font-medium hover:bg-cream-deep"
+          >
+            <Home className="size-4" />
+            Accueil
+          </Link>
+          <Link
             href="/mes-chansons"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2 px-4 py-3 text-sm font-medium hover:bg-cream-deep"
           >
             <Music2 className="size-4" />
             Mes chansons
+          </Link>
+          <Link
+            href="/profil"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 px-4 py-3 text-sm font-medium hover:bg-cream-deep"
+          >
+            <UserRound className="size-4" />
+            Profil
           </Link>
           <form action="/auth/signout" method="post">
             <button

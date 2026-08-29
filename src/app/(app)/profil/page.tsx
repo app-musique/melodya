@@ -1,0 +1,120 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ArrowRight, Coins, Gift, Music4, Settings } from "lucide-react";
+import { getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentProfile, listTransactions } from "@/lib/credits";
+import { listSongs } from "@/lib/songs";
+import type { CreditTransaction } from "@/lib/domain";
+
+export const metadata: Metadata = { title: "Profil", robots: { index: false } };
+
+const REASON_LABEL: Record<CreditTransaction["reason"], string> = {
+  purchase: "Achat de crédits",
+  song: "Chanson créée",
+  bonus: "Bonus de bienvenue",
+  refund: "Remboursement",
+  referral: "Parrainage",
+  adjustment: "Ajustement",
+};
+
+export default async function ProfilPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/connexion");
+
+  const [profile, songs, txns] = await Promise.all([
+    getCurrentProfile(),
+    listSongs(),
+    listTransactions(user.id),
+  ]);
+
+  const memberSince = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+    : "—";
+  const songCount = songs.filter((s) => s.status !== "draft").length;
+
+  return (
+    <div className="mx-auto w-full max-w-2xl px-5 py-8 sm:py-10">
+      <div className="flex flex-col items-center text-center">
+        <span className="grid size-20 place-items-center rounded-full gradient-brand text-2xl font-bold text-white">
+          {(profile?.full_name || user.email || "?").charAt(0).toUpperCase()}
+        </span>
+        <h1 className="mt-3 font-display text-xl font-extrabold">
+          {profile?.full_name || "Mon compte"}
+        </h1>
+        <p className="text-sm text-ink-soft">{user.email}</p>
+      </div>
+
+      <div className="mt-6 grid grid-cols-3 gap-3">
+        {[
+          { label: "Crédits", value: profile?.credit_balance ?? 0 },
+          { label: "Chansons", value: songCount },
+          { label: "Membre depuis", value: memberSince },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl border border-line bg-white p-4 text-center">
+            <p className="font-display text-lg font-extrabold">{s.value}</p>
+            <p className="text-xs text-ink-soft">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/credits"
+          className="flex items-center justify-center gap-2 rounded-full gradient-brand px-5 py-3 text-sm font-semibold text-white"
+        >
+          <Coins className="size-4" />
+          Acheter des crédits
+        </Link>
+        <Link
+          href="/mes-chansons"
+          className="flex items-center justify-center gap-2 rounded-full border border-line bg-white px-5 py-3 text-sm font-semibold"
+        >
+          <Music4 className="size-4" />
+          Mes chansons
+        </Link>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center gap-3 rounded-2xl border border-dashed border-line bg-white p-4 text-sm text-ink-soft">
+          <Gift className="size-4 shrink-0 text-brand-strong" />
+          Offrir des crédits à un proche — <span className="text-ink-soft/70">bientôt</span>
+        </div>
+        <Link
+          href="/profil/parametres"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4 text-sm font-medium hover:bg-cream-deep"
+        >
+          <span className="flex items-center gap-2">
+            <Settings className="size-4" />
+            Réglages
+          </span>
+          <ArrowRight className="size-4 text-ink-soft" />
+        </Link>
+      </div>
+
+      {txns.length > 0 && (
+        <div className="mt-8">
+          <h2 className="font-display text-lg font-bold">Historique des crédits</h2>
+          <ul className="mt-3 divide-y divide-line rounded-2xl border border-line bg-white">
+            {txns.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <span>
+                  <span className="block font-medium">{REASON_LABEL[t.reason]}</span>
+                  <span className="block text-xs text-ink-soft">
+                    {new Date(t.created_at).toLocaleDateString("fr-FR")}
+                  </span>
+                </span>
+                <span
+                  className={`font-semibold ${t.amount >= 0 ? "text-green-700" : "text-ink-soft"}`}
+                >
+                  {t.amount >= 0 ? "+" : ""}
+                  {t.amount}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

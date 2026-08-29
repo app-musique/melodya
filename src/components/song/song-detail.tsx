@@ -56,20 +56,6 @@ export function SongDetail({ initial }: { initial: Bundle }) {
         <StatusBadge status={song.status} />
       </header>
 
-      {song.status === "pending_payment" && (
-        <Card>
-          <p className="text-sm">
-            Le paiement n&apos;a pas été finalisé. Reprends ta commande pour la régler.
-          </p>
-          <a
-            href={`/commander/${song.id}/paiement`}
-            className="mt-4 inline-flex rounded-full gradient-brand px-5 py-2.5 text-sm font-semibold text-white"
-          >
-            Reprendre le paiement
-          </a>
-        </Card>
-      )}
-
       {(song.status === "paid" || song.status === "generating") && (
         <Card>
           <div className="flex items-center gap-3">

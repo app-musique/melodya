@@ -25,3 +25,21 @@ export async function requireUser() {
   }
   return { user, response: null };
 }
+
+/** Comme requireUser mais exige aussi profiles.is_admin. */
+export async function requireAdmin() {
+  const { user, response } = await requireUser();
+  if (response) return { user: null, response };
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user!.id)
+    .maybeSingle();
+
+  if (!data || !(data as { is_admin: boolean }).is_admin) {
+    return { user: null, response: apiError("Accès réservé", 403) as NextResponse };
+  }
+  return { user, response: null };
+}

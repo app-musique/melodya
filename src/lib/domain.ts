@@ -1,5 +1,3 @@
-import type { AddonId } from "@/lib/pricing";
-
 export type SongStatus =
   | "draft"
   | "pending_payment"
@@ -76,9 +74,7 @@ export type Song = {
   lyrics: string | null;
   lyrics_approved: boolean;
   regen_count: number;
-  addons: AddonId[];
-  price_total: number;
-  currency: string;
+  credits_cost: number;
   provider: string | null;
   provider_job_id: string | null;
   generation_started_at: string | null;
@@ -104,6 +100,39 @@ export type SongAsset = {
   song_id: string;
   type: "cover" | "clip" | "instrumental" | "wav";
   url: string;
+  created_at: string;
+};
+
+export type Profile = {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  country: string | null;
+  is_admin: boolean;
+  credit_balance: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreditPack = {
+  id: string;
+  name: string;
+  credits: number;
+  price: number;
+  currency: string;
+  is_popular: boolean;
+  is_active: boolean;
+  sort_order: number;
+};
+
+export type CreditTransaction = {
+  id: string;
+  user_id: string;
+  amount: number;
+  reason: "purchase" | "song" | "refund" | "bonus" | "referral" | "adjustment";
+  song_id: string | null;
+  payment_id: string | null;
+  balance_after: number;
   created_at: string;
 };
 

@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   Check,
-  Clock,
   Image as ImageIcon,
   Mic,
   PenLine,
@@ -19,6 +18,11 @@ import { Faq } from "@/components/faq";
 import { ExampleCard, type Example } from "@/components/example-card";
 import { Logo } from "@/components/logo";
 import { navLinks, occasions, orderHref, paymentMethods } from "@/lib/site";
+import { getCreditsPerSong, getPacks } from "@/lib/credits";
+import { formatXOF, pricePerSong } from "@/lib/pricing";
+import { isSupabaseConfigured } from "@/lib/env";
+
+export const revalidate = 300;
 
 const steps = [
   {
@@ -121,13 +125,6 @@ const included = [
   "1 régénération offerte si tu n'es pas satisfait",
 ];
 
-const addons = [
-  { name: "Clip vidéo lyrics", price: "+ 3 000 F" },
-  { name: "Livraison express 6h", price: "+ 2 000 F" },
-  { name: "Version instrumentale (karaoké)", price: "+ 1 500 F" },
-  { name: "Fichier WAV studio", price: "+ 2 500 F" },
-];
-
 const testimonials = [
   {
     quote:
@@ -149,7 +146,11 @@ const testimonials = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const [packs, creditsPerSong] = isSupabaseConfigured
+    ? await Promise.all([getPacks(), getCreditsPerSong()])
+    : [[], 1];
+
   return (
     <>
       <SiteHeader />
@@ -329,71 +330,86 @@ export default function Home() {
           <div className="mx-auto max-w-6xl px-5">
             <header className="mx-auto max-w-2xl text-center">
               <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Un prix unique, tout compris
+                Des crédits, pas d&apos;abonnement
               </h2>
               <p className="mt-3 text-ink-soft">
-                Pas d&apos;abonnement. Tu paies ta chanson, une seule fois.
+                1 chanson = 1 crédit, tout inclus. Tes crédits n&apos;expirent jamais.
               </p>
             </header>
 
-            <div className="mx-auto mt-12 grid max-w-4xl gap-6 lg:grid-cols-[1.3fr_1fr]">
-              <div className="rounded-3xl border border-line bg-white p-8 shadow-[var(--shadow-soft)]">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display text-4xl font-extrabold">9 900 F</span>
-                  <span className="text-ink-soft">CFA · ~15 €</span>
-                </div>
-                <p className="mt-1 text-sm text-ink-soft">Chanson personnalisée complète</p>
-
-                <ul className="mt-6 space-y-3">
-                  {included.map((f) => (
-                    <li key={f} className="flex gap-3 text-sm">
-                      <Check className="mt-0.5 size-4 shrink-0 text-brand-strong" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
+            {packs.length > 0 ? (
+              <div className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-3">
+                {packs.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`relative rounded-3xl border bg-white p-6 ${
+                      p.is_popular
+                        ? "border-brand shadow-[var(--shadow-float)]"
+                        : "border-line shadow-[var(--shadow-soft)]"
+                    }`}
+                  >
+                    {p.is_popular && (
+                      <span className="absolute -top-3 left-6 rounded-full gradient-brand px-3 py-1 text-[11px] font-semibold text-white">
+                        Le plus choisi
+                      </span>
+                    )}
+                    <h3 className="font-display text-lg font-bold">{p.name}</h3>
+                    <p className="text-sm text-ink-soft">
+                      {Math.floor(p.credits / creditsPerSong)} chanson
+                      {Math.floor(p.credits / creditsPerSong) > 1 ? "s" : ""}
+                    </p>
+                    <p className="mt-4 font-display text-3xl font-extrabold">
+                      {formatXOF(p.price)}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-soft">
+                      ≈ {formatXOF(pricePerSong(p.price, p.credits, creditsPerSong))} / chanson
+                    </p>
+                    <a
+                      href={orderHref}
+                      className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition-transform hover:-translate-y-0.5 ${
+                        p.is_popular
+                          ? "gradient-brand text-white shadow-[var(--shadow-float)]"
+                          : "border border-ink/15 bg-white text-ink"
+                      }`}
+                    >
+                      Choisir
+                      <ArrowRight className="size-4" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mx-auto mt-12 max-w-md text-center">
                 <a
                   href={orderHref}
-                  className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full gradient-brand px-7 py-4 font-semibold text-white shadow-[var(--shadow-float)] transition-transform hover:-translate-y-0.5"
+                  className="inline-flex items-center gap-2 rounded-full gradient-brand px-7 py-4 font-semibold text-white shadow-[var(--shadow-float)]"
                 >
-                  Commencer ma chanson
+                  Créer ma chanson
                   <ArrowRight className="size-4" />
                 </a>
-                <p className="mt-3 flex items-center justify-center gap-2 text-xs text-ink-soft">
-                  <Clock className="size-3.5" /> Chanson prête sous 24h garanti
-                </p>
               </div>
+            )}
 
-              <div className="flex flex-col gap-6">
-                <div className="rounded-3xl border border-line bg-white p-8">
-                  <h3 className="font-display text-lg font-bold">Options en plus</h3>
-                  <p className="mt-1 text-sm text-ink-soft">À ajouter au moment de la commande.</p>
-                  <ul className="mt-6 divide-y divide-line">
-                    {addons.map((a) => (
-                      <li
-                        key={a.name}
-                        className="flex items-center justify-between gap-4 py-3 text-sm"
-                      >
-                        <span>{a.name}</span>
-                        <span className="font-semibold text-brand-strong">{a.price}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+            <ul className="mx-auto mt-12 grid max-w-3xl gap-x-8 gap-y-3 sm:grid-cols-2">
+              {included.map((f) => (
+                <li key={f} className="flex gap-3 text-sm">
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand-strong" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
 
-                <div className="rounded-3xl border border-line bg-white p-6">
-                  <p className="flex items-center gap-2 text-sm font-semibold">
-                    <ShieldCheck className="size-4 text-brand-strong" />
-                    Paiement sécurisé via Moneroo
-                  </p>
-                  <p className="mt-2 text-xs leading-relaxed text-ink-soft">
-                    Orange Money, MTN MoMo, Moov Money, Wave, M-Pesa, Airtel Money et carte
-                    bancaire. Transaction chiffrée, aucun frais caché.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <p className="mx-auto mt-10 flex max-w-xl flex-col items-center gap-2 text-center">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <ShieldCheck className="size-4 text-brand-strong" />
+                Paiement sécurisé via Moneroo
+              </span>
+              <span className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-ink-soft/80">
+                {paymentMethods.map((m) => (
+                  <span key={m}>{m}</span>
+                ))}
+              </span>
+            </p>
           </div>
         </section>
 

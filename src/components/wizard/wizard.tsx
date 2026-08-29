@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Sparkles, Wand2 } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRight, Check, Coins, Sparkles, Wand2 } from "lucide-react";
 import { Button, ChoiceGrid, SelectField, TextArea, TextField } from "@/components/ui";
 import {
   LANGUAGES,
@@ -12,15 +13,8 @@ import {
   VOICES,
   type Song,
 } from "@/lib/domain";
-import { ADDONS, BASE_PRICE, computeTotal, formatXOF, type AddonId } from "@/lib/pricing";
 import { occasions } from "@/lib/site";
-import {
-  stepAddons,
-  stepLyrics,
-  stepOccasion,
-  stepStory,
-  stepStyle,
-} from "@/lib/schemas";
+import { stepLyrics, stepOccasion, stepStory, stepStyle } from "@/lib/schemas";
 
 type FormState = {
   occasion: string;
@@ -35,12 +29,20 @@ type FormState = {
   mood: string;
   lyrics: string;
   lyrics_approved: boolean;
-  addons: AddonId[];
 };
 
-const STEPS = ["Occasion", "Histoire", "Style & voix", "Paroles", "Options", "Paiement"];
+const STEPS = ["Occasion", "Histoire", "Style & voix", "Paroles", "Créer"];
 
-export function Wizard({ song }: { song: Song }) {
+export function Wizard({
+  song,
+  balance,
+  creditsPerSong,
+}: {
+  song: Song;
+  balance: number;
+  creditsPerSong: number;
+}) {
+  const router = useRouter();
   const [form, setForm] = useState<FormState>({
     occasion: song.occasion ?? "",
     recipient_name: song.recipient_name ?? "",
@@ -54,7 +56,6 @@ export function Wizard({ song }: { song: Song }) {
     mood: song.mood ?? "",
     lyrics: song.lyrics ?? "",
     lyrics_approved: song.lyrics_approved,
-    addons: song.addons ?? [],
   });
   const [step, setStep] = useState(song.lyrics_approved ? 4 : 0);
   const [busy, setBusy] = useState(false);
@@ -62,10 +63,9 @@ export function Wizard({ song }: { song: Song }) {
   const [regenCount, setRegenCount] = useState(song.regen_count);
   const [error, setError] = useState<string | null>(null);
 
+  const enoughCredits = balance >= creditsPerSong;
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
-
-  const total = useMemo(() => computeTotal(form.addons), [form.addons]);
 
   async function patch(fields: Partial<FormState>) {
     const res = await fetch(`/api/songs/${song.id}`, {
@@ -99,10 +99,6 @@ export function Wizard({ song }: { song: Song }) {
       });
       return r.success ? null : r.error.issues[0].message;
     }
-    if (step === 4) {
-      const r = stepAddons.safeParse({ addons: form.addons });
-      return r.success ? null : r.error.issues[0].message;
-    }
     return null;
   }
 
@@ -131,7 +127,6 @@ export function Wizard({ song }: { song: Song }) {
           mood: form.mood,
         },
         { lyrics: form.lyrics, lyrics_approved: form.lyrics_approved },
-        { addons: form.addons },
       ];
       await patch(slices[step]);
       setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -151,7 +146,6 @@ export function Wizard({ song }: { song: Song }) {
     setError(null);
     setGenBusy(true);
     try {
-      // Sauvegarde le brief avant de générer.
       await patch({
         occasion: form.occasion,
         recipient_name: form.recipient_name,
@@ -180,19 +174,19 @@ export function Wizard({ song }: { song: Song }) {
     }
   }
 
-  async function checkout() {
+  async function createSong() {
     setError(null);
     setBusy(true);
     try {
       await patch({ lyrics: form.lyrics, lyrics_approved: form.lyrics_approved });
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ songId: song.id }),
-      });
+      const res = await fetch(`/api/songs/${song.id}/create`, { method: "POST" });
       const j = await res.json();
-      if (!res.ok) throw new Error(j.error ?? "Paiement impossible");
-      window.location.href = j.redirectUrl;
+      if (res.status === 402) {
+        router.push("/credits?next=/commander");
+        return;
+      }
+      if (!res.ok) throw new Error(j.error ?? "Création impossible");
+      router.push(j.redirectUrl ?? `/mes-chansons/${song.id}`);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
@@ -201,14 +195,11 @@ export function Wizard({ song }: { song: Song }) {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {/* Stepper */}
       <ol className="mb-8 flex items-center gap-1.5">
         {STEPS.map((label, i) => (
           <li key={label} className="flex flex-1 flex-col gap-1.5">
             <span
-              className={`h-1.5 rounded-full transition-colors ${
-                i <= step ? "gradient-brand" : "bg-line"
-              }`}
+              className={`h-1.5 rounded-full transition-colors ${i <= step ? "gradient-brand" : "bg-line"}`}
             />
             <span
               className={`hidden text-[11px] font-semibold sm:block ${
@@ -330,7 +321,10 @@ export function Wizard({ song }: { song: Song }) {
         )}
 
         {step === 3 && (
-          <Section title="Les paroles" subtitle="Générées par l'IA à partir de ton histoire, puis modifiables librement.">
+          <Section
+            title="Les paroles"
+            subtitle="Générées par l'IA à partir de ton histoire, puis modifiables librement."
+          >
             {!form.lyrics ? (
               <Button loading={genBusy} onClick={() => generateLyrics(false)}>
                 <Wand2 className="size-4" />
@@ -345,17 +339,15 @@ export function Wizard({ song }: { song: Song }) {
                   onChange={(e) => set("lyrics", e.target.value)}
                   className="font-mono text-[13px] leading-relaxed"
                 />
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button
-                    variant="outline"
-                    loading={genBusy}
-                    onClick={() => generateLyrics(true)}
-                    disabled={regenCount >= MAX_REGENERATIONS}
-                  >
-                    <Sparkles className="size-4" />
-                    Régénérer ({MAX_REGENERATIONS - regenCount} restantes)
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  loading={genBusy}
+                  onClick={() => generateLyrics(true)}
+                  disabled={regenCount >= MAX_REGENERATIONS}
+                >
+                  <Sparkles className="size-4" />
+                  Régénérer ({MAX_REGENERATIONS - regenCount} restantes)
+                </Button>
                 <label className="flex items-start gap-3 rounded-xl bg-cream-deep p-4 text-sm">
                   <input
                     type="checkbox"
@@ -374,71 +366,44 @@ export function Wizard({ song }: { song: Song }) {
         )}
 
         {step === 4 && (
-          <Section title="Options" subtitle="Tout est déjà inclus. Ajoute un plus si tu veux.">
-            <div className="space-y-2">
-              {ADDONS.map((a) => {
-                const checked = form.addons.includes(a.id);
-                return (
-                  <label
-                    key={a.id}
-                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors ${
-                      checked ? "border-brand bg-brand/5" : "border-line bg-white"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) =>
-                        set(
-                          "addons",
-                          e.target.checked
-                            ? [...form.addons, a.id]
-                            : form.addons.filter((x) => x !== a.id),
-                        )
-                      }
-                      className="size-4"
-                    />
-                    <span className="flex-1">
-                      <span className="block text-sm font-semibold">{a.label}</span>
-                      <span className="block text-xs text-ink-soft">{a.hint}</span>
-                    </span>
-                    <span className="text-sm font-semibold text-brand-strong">
-                      +{formatXOF(a.price)}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-            <div className="flex items-center justify-between rounded-xl bg-cream-deep px-4 py-3 text-sm font-semibold">
-              <span>Total</span>
-              <span className="font-display text-lg">{formatXOF(total)}</span>
-            </div>
-          </Section>
-        )}
-
-        {step === 5 && (
-          <Section title="Récapitulatif" subtitle="Un paiement unique, puis on lance la création.">
+          <Section title="Créer ta chanson" subtitle="Récapitulatif avant lancement.">
             <dl className="divide-y divide-line rounded-xl border border-line">
               <Row label="Occasion" value={form.occasion} />
               <Row label="Pour" value={`${form.recipient_name} (${form.relationship})`} />
               <Row label="Style" value={`${form.music_style} · ${form.mood}`} />
               <Row label="Voix" value={VOICES.find((v) => v.id === form.voice)?.label ?? "—"} />
-              <Row label="Chanson de base" value={formatXOF(BASE_PRICE)} />
-              {form.addons.map((id) => {
-                const a = ADDONS.find((x) => x.id === id)!;
-                return <Row key={id} label={a.label} value={`+${formatXOF(a.price)}`} />;
-              })}
             </dl>
-            <div className="flex items-center justify-between rounded-xl bg-cream-deep px-4 py-3">
-              <span className="text-sm font-semibold">Total à payer</span>
-              <span className="font-display text-xl font-extrabold">{formatXOF(total)}</span>
+
+            <div className="flex items-center justify-between rounded-xl bg-cream-deep px-4 py-3 text-sm">
+              <span className="flex items-center gap-2 font-semibold">
+                <Coins className="size-4 text-gold" />
+                Coût : {creditsPerSong} crédit{creditsPerSong > 1 ? "s" : ""}
+              </span>
+              <span className="text-ink-soft">Solde : {balance}</span>
             </div>
-            <Button loading={busy} onClick={checkout} className="w-full">
-              Payer {formatXOF(total)}
-              <ArrowRight className="size-4" />
-            </Button>
+
+            {enoughCredits ? (
+              <Button loading={busy} onClick={createSong} className="w-full">
+                Créer ma chanson ({creditsPerSong} crédit{creditsPerSong > 1 ? "s" : ""})
+                <ArrowRight className="size-4" />
+              </Button>
+            ) : (
+              <>
+                <p className="text-sm text-ink-soft">
+                  Il te faut {creditsPerSong - balance} crédit
+                  {creditsPerSong - balance > 1 ? "s" : ""} de plus.
+                </p>
+                <Button
+                  onClick={() => router.push("/credits?next=/commander")}
+                  className="w-full"
+                >
+                  <Coins className="size-4" />
+                  Acheter des crédits
+                </Button>
+              </>
+            )}
             <p className="text-center text-xs text-ink-soft">
-              Paiement sécurisé via Moneroo · Mobile Money ou carte
+              Paroles, MP3, pochette et 3 versions inclus. Prête en 24h.
             </p>
           </Section>
         )}
@@ -449,26 +414,18 @@ export function Wizard({ song }: { song: Song }) {
           </p>
         )}
 
-        {step < 5 && (
-          <div className="mt-6 flex items-center justify-between">
-            <Button variant="ghost" onClick={back} disabled={step === 0 || busy}>
-              <ArrowLeft className="size-4" />
-              Retour
-            </Button>
+        <div className="mt-6 flex items-center justify-between">
+          <Button variant="ghost" onClick={back} disabled={step === 0 || busy}>
+            <ArrowLeft className="size-4" />
+            {step === 4 ? "Modifier" : "Retour"}
+          </Button>
+          {step < 4 && (
             <Button loading={busy} onClick={next}>
-              {step === 4 ? "Voir le récapitulatif" : "Continuer"}
+              Continuer
               {step === 3 ? <Check className="size-4" /> : <ArrowRight className="size-4" />}
             </Button>
-          </div>
-        )}
-        {step === 5 && (
-          <div className="mt-6">
-            <Button variant="ghost" onClick={back} disabled={busy}>
-              <ArrowLeft className="size-4" />
-              Modifier
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
