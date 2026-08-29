@@ -35,16 +35,19 @@ export function SyncedLyrics({
     const el = activeRef.current;
     const box = containerRef.current;
     if (!el || !box) return;
-    box.scrollTo({
-      top: el.offsetTop - box.clientHeight / 2 + el.clientHeight / 2,
-      behavior: "smooth",
-    });
+    // Centre la ligne active dans le conteneur — calcul par rect (robuste quel
+    // que soit le positionnement des ancêtres, contrairement à offsetTop).
+    const boxRect = box.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const target =
+      box.scrollTop + (elRect.top - boxRect.top) - (box.clientHeight / 2 - el.clientHeight / 2);
+    box.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
   }, [activeIndex]);
 
   return (
     <div
       ref={containerRef}
-      className={`${heightClass} overflow-y-auto pr-2 [mask-image:linear-gradient(180deg,transparent,#000_12%,#000_88%,transparent)]`}
+      className={`relative ${heightClass} overflow-y-auto pr-2 [mask-image:linear-gradient(180deg,transparent,#000_14%,#000_86%,transparent)]`}
     >
       <div className="space-y-3 py-32">
         {lines.map((l, i) =>

@@ -116,7 +116,7 @@ export const sunoMusicProvider: MusicProvider = {
     return { status: "pending" };
   },
 
-  async getLineTimings(jobId, audioId, lyrics): Promise<LineTiming[] | null> {
+  async getLineTimings(jobId, audioId): Promise<LineTiming[] | null> {
     try {
       const res = await fetch(base("/api/v1/generate/get-timestamped-lyrics"), {
         method: "POST",
@@ -129,20 +129,29 @@ export const sunoMusicProvider: MusicProvider = {
       const words = json.data?.alignedWords ?? [];
       if (!words.length) return null;
 
-      // Lignes de paroles (on ignore les balises [Section]).
-      const lines = lyrics
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0 && !/^\[.*\]$/.test(l));
-
+      // Les mots alignés Suno reprennent le texte d'origine avec ses \n et ses
+      // balises [Section] : on reconstruit chaque ligne chantée + son instant de
+      // départ (fiable, pas de dérive liée au comptage de mots).
       const timings: LineTiming[] = [];
-      let wi = 0;
-      for (const line of lines) {
-        const count = line.split(/\s+/).filter(Boolean).length;
-        if (wi >= words.length) break;
-        timings.push({ t: Number(words[wi].startS) || 0, line });
-        wi += count;
+      let lineStart: number | null = null;
+      let current = "";
+      for (const w of words) {
+        const text = String(w.word ?? "").replace(/\[[^\]]*\]/g, "");
+        const parts = text.split("\n");
+        for (let k = 0; k < parts.length; k++) {
+          if (lineStart === null && parts[k].trim()) lineStart = Number(w.startS) || 0;
+          current += parts[k];
+          if (k < parts.length - 1) {
+            if (current.trim()) {
+              timings.push({ t: lineStart ?? (Number(w.startS) || 0), line: current.trim() });
+            }
+            current = "";
+            lineStart = null;
+          }
+        }
       }
+      if (current.trim()) timings.push({ t: lineStart ?? 0, line: current.trim() });
+
       return timings.length ? timings : null;
     } catch {
       return null;
