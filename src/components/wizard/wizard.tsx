@@ -112,7 +112,13 @@ export function Wizard({
   const [regenCount, setRegenCount] = useState(song.regen_count);
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
-  const [showResumeHint, setShowResumeHint] = useState(() => resumeStep(song) >= 2);
+  const [showResumeHint, setShowResumeHint] = useState(
+    () =>
+      !!song.recipient_name ||
+      (song.story ?? "").length > 0 ||
+      (song.lyrics ?? "").length > 0 ||
+      resumeStep(song) >= 2,
+  );
 
   const enoughCredits = balance >= creditsPerSong;
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
