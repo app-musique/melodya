@@ -1,15 +1,10 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { ExplorePlayer } from "@/components/explore/explore-player";
-import { getExploreSong } from "@/lib/explore";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Écoute", robots: { index: false } };
-
+// L'écoute d'une chanson « s'inspirer » vit désormais sur une page publique
+// partageable (/inspiration/[id]). On redirige les anciens liens.
 type Props = { params: Promise<{ id: string }> };
 
-export default async function ExploreSongPage({ params }: Props) {
+export default async function LegacyExploreSongPage({ params }: Props) {
   const { id } = await params;
-  const item = await getExploreSong(id);
-  if (!item) notFound();
-  return <ExplorePlayer item={item} />;
+  redirect(`/inspiration/${id}`);
 }
