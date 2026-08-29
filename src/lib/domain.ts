@@ -90,6 +90,8 @@ export type Song = {
   lyrics_timing: LyricsTiming | null;
   clip_dedication: string | null;
   assets_synced_at: string | null;
+  shared_with_followers: boolean;
+  followers_notified_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -128,6 +130,7 @@ export type SongPhoto = {
 export type Profile = {
   id: string;
   full_name: string | null;
+  handle: string | null;
   phone: string | null;
   country: string | null;
   is_admin: boolean;
@@ -189,7 +192,8 @@ export type NotificationType =
   | "song_failed"
   | "gift_viewed"
   | "gift_reaction"
-  | "occasion_soon";
+  | "occasion_soon"
+  | "creator_new_song";
 
 export type AppNotification = {
   id: string;

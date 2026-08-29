@@ -24,19 +24,23 @@ export type ExploreDetail = ExploreItem & {
   voice: string | null;
   language: string | null;
   reactionsByEmoji: ReactionSummary["byEmoji"];
+  creatorId: string;
 };
 
 const SELECT =
-  "id,is_showcase,showcase_title,showcase_artist,sender_name,recipient_name,occasion,music_style,mood,voice,language,lyrics,lyrics_timing,plays_count,status,is_public";
+  "id,user_id,is_showcase,shared_with_followers,showcase_title,showcase_artist,sender_name,recipient_name,occasion,music_style,mood,voice,language,lyrics,lyrics_timing,plays_count,status,is_public";
 
 function toItem(s: Record<string, unknown>, reactions = 0): ExploreItem {
   const song = s as unknown as Song;
+  // Chanson partagée avec des abonnés (pas une vitrine) : on n'expose jamais le
+  // prénom réel du destinataire — titre neutre basé sur l'occasion.
+  const fallbackTitle = song.is_showcase
+    ? "Une chanson Muzikii"
+    : song.occasion || "Chanson";
   return {
     id: song.id,
-    title:
-      song.showcase_title ||
-      (song.is_showcase ? "Une chanson Muzikii" : `Pour ${song.recipient_name ?? "un proche"}`),
-    artist: song.showcase_artist || song.sender_name || null,
+    title: song.showcase_title || fallbackTitle,
+    artist: song.showcase_artist || null,
     occasion: song.occasion,
     style: song.music_style,
     cover: `${env.siteUrl}/api/cover/${song.id}`,
@@ -75,7 +79,8 @@ export async function getExploreSong(id: string): Promise<ExploreDetail | null> 
   const { data } = await admin.from("songs").select(SELECT).eq("id", id).maybeSingle();
   if (!data) return null;
   const s = data as unknown as Song;
-  if (!s.is_showcase) return null;
+  // Publiquement écoutable : vitrine curée OU chanson partagée avec les abonnés.
+  if (!s.is_showcase && !(s.shared_with_followers && s.status === "ready")) return null;
 
   const { data: version } = await admin
     .from("song_versions")
@@ -95,6 +100,7 @@ export async function getExploreSong(id: string): Promise<ExploreDetail | null> 
     voice: s.voice,
     language: s.language,
     reactionsByEmoji: summary.byEmoji,
+    creatorId: s.user_id,
   };
 }
 
@@ -117,12 +123,13 @@ export async function getInspiration(id: string): Promise<{
   const admin = createAdminClient();
   const { data } = await admin
     .from("songs")
-    .select("music_style,mood,voice,language,is_showcase,is_public,status")
+    .select("music_style,mood,voice,language,is_showcase,shared_with_followers,is_public,status")
     .eq("id", id)
     .maybeSingle();
   if (!data) return null;
   const s = data as unknown as Song;
-  if (!s.is_showcase && !(s.is_public && s.status === "ready")) return null;
+  const ready = s.status === "ready";
+  if (!s.is_showcase && !((s.is_public || s.shared_with_followers) && ready)) return null;
   return {
     music_style: s.music_style,
     mood: s.mood,

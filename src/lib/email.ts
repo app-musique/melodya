@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { env, isMockEmail } from "@/lib/env";
 import {
+  creatorNewSongTpl,
   giftReactionTpl,
   occasionReminderTpl,
   songReadyTpl,
@@ -97,6 +98,39 @@ export async function sendGiftReactionEmail(
     r.email,
     giftReactionTpl({ name: r.name, siteUrl: env.siteUrl, ...opts }),
   );
+}
+
+/**
+ * Notifie un abonné (connecté ou anonyme) qu'un créateur a publié une chanson.
+ * - toUserId : respecte l'opt-out email du profil.
+ * - toEmail  : envoi direct (abonné sans compte), avec lien de désabonnement.
+ */
+export async function sendCreatorNewSongEmail(opts: {
+  toUserId?: string | null;
+  toEmail?: string | null;
+  creatorName: string;
+  songTitle: string;
+  occasion: string | null;
+  songId: string;
+  unsubscribeToken: string;
+}): Promise<void> {
+  const unsubscribeHref = `${env.siteUrl}/desabonnement/${opts.unsubscribeToken}`;
+  const mail = creatorNewSongTpl({
+    creatorName: opts.creatorName,
+    songTitle: opts.songTitle,
+    occasion: opts.occasion,
+    songId: opts.songId,
+    unsubscribeHref,
+    siteUrl: env.siteUrl,
+  });
+
+  let to: string | null = opts.toEmail ?? null;
+  if (opts.toUserId) {
+    const r = await recipient(opts.toUserId);
+    to = r?.email ?? null;
+  }
+  if (!to) return;
+  await send(to, mail);
 }
 
 export async function sendOccasionReminderEmail(

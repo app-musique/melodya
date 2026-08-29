@@ -26,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const profile: Profile = profileData ?? {
     id: user.id,
     full_name: null,
+    handle: null,
     phone: null,
     country: null,
     is_admin: false,
