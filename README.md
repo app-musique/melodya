@@ -123,3 +123,5 @@ supabase/migrations/0001_init.sql
 - Back-office admin (suivi des commandes, remboursements)
 - i18n FR / EN (`next-intl`)
 - Pages légales (confidentialité, CGU)
+
+<!-- redeploy 2026-08-29T10:15:54Z -->
