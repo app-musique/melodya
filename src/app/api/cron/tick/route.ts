@@ -7,9 +7,10 @@ import { env } from "@/lib/env";
 export const maxDuration = 60;
 
 /**
- * Filet de sécurité (Vercel Cron, cf. vercel.json) : rattrape les générations
- * dont ni le polling ni le webhook n'ont abouti (onglet fermé, webhook KO).
- * Inactif tant que CRON_SECRET n'est pas défini.
+ * Filet de sécurité : rattrape les générations dont ni le polling ni le webhook
+ * n'ont abouti (onglet fermé, webhook KO). À appeler périodiquement avec
+ * l'en-tête "Authorization: Bearer <CRON_SECRET>" — cron Vercel (Settings > Cron
+ * Jobs, plan Pro) ou service externe. Inactif tant que CRON_SECRET n'est pas défini.
  */
 export async function GET(req: Request) {
   if (!env.cronSecret || req.headers.get("authorization") !== `Bearer ${env.cronSecret}`) {
