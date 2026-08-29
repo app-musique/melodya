@@ -39,7 +39,14 @@ const FAILED = new Set([
   "SENSITIVE_WORD_ERROR",
 ]);
 
-type SunoClip = { id?: string; audioUrl?: string; streamAudioUrl?: string; duration?: number };
+type SunoClip = {
+  id?: string;
+  audioUrl?: string;
+  streamAudioUrl?: string;
+  duration?: number;
+  imageUrl?: string;
+  sourceImageUrl?: string;
+};
 
 /** Solde de crédits sunoapi.org (null si non configuré / injoignable). */
 export async function getSunoCredits(): Promise<number | null> {
@@ -108,6 +115,7 @@ export const sunoMusicProvider: MusicProvider = {
             url: (c.audioUrl || c.streamAudioUrl)!,
             durationSec: c.duration ? Math.round(c.duration) : null,
             providerAudioId: c.id ?? null,
+            imageUrl: c.sourceImageUrl || c.imageUrl || null,
           })),
       };
     }

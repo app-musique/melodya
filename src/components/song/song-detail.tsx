@@ -12,11 +12,13 @@ import {
   ExternalLink,
   Eye,
   Headphones,
+  Image as ImageIcon,
   Loader2,
   Lock,
   Music4,
   RefreshCw,
   Share2,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { StatusBadge } from "@/components/song/status-badge";
@@ -106,6 +108,7 @@ export function SongDetail({ initial }: { initial: Bundle }) {
       {song.status === "ready" && versions.length > 0 && (
         <>
           <VersionPicker bundle={bundle} onChange={setBundle} />
+          <CoverCard bundle={bundle} onChange={setBundle} />
           <ShareCard song={song} />
           <SubscribersCard song={song} />
           <Link
@@ -399,6 +402,123 @@ function ShareCard({ song }: { song: Song }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function CoverCard({ bundle, onChange }: { bundle: Bundle; onChange: (b: Bundle) => void }) {
+  const { song, versions } = bundle;
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const generated = [
+    ...new Set(versions.map((v) => v.image_url).filter((u): u is string => !!u)),
+  ];
+
+  async function apply(res: Response) {
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(j.error ?? "Impossible");
+      return;
+    }
+    onChange({ ...bundle, song: { ...song, cover_url: j.coverUrl, cover_custom: true } });
+  }
+
+  async function pick(url: string) {
+    setError(null);
+    setBusy(url);
+    await apply(
+      await fetch(`/api/songs/${song.id}/cover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromUrl: url }),
+      }),
+    );
+    setBusy(null);
+  }
+
+  async function upload(file: File) {
+    setError(null);
+    setBusy("upload");
+    const fd = new FormData();
+    fd.append("file", file);
+    await apply(await fetch(`/api/songs/${song.id}/cover`, { method: "POST", body: fd }));
+    setBusy(null);
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2">
+        <ImageIcon className="size-4 text-brand-strong" />
+        <h2 className="font-display text-lg font-bold">Pochette</h2>
+      </div>
+      <p className="mt-1 text-sm text-ink-soft">
+        Choisis une des pochettes générées, ou importe ta propre image (JPG, PNG, WEBP, GIF).
+      </p>
+
+      <div className="mt-4 flex flex-wrap items-start gap-3">
+        {/* pochette actuelle */}
+        <div className="text-center">
+          <div className="size-24 overflow-hidden rounded-2xl border-2 border-brand bg-cream-deep">
+            {song.cover_url ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={song.cover_url} alt="" className="size-full object-cover" />
+            ) : (
+              <div className="grid size-full place-items-center text-[10px] text-ink-soft">
+                Pochette
+                <br />
+                par défaut
+              </div>
+            )}
+          </div>
+          <p className="mt-1 text-[11px] font-semibold text-brand-strong">Actuelle</p>
+        </div>
+
+        {/* pochettes générées à choisir */}
+        {generated
+          .filter((u) => u !== song.cover_url)
+          .map((url) => (
+            <button
+              key={url}
+              onClick={() => pick(url)}
+              disabled={busy !== null}
+              className="size-24 overflow-hidden rounded-2xl border border-line transition-transform hover:-translate-y-0.5 disabled:opacity-50"
+            >
+              {busy === url ? (
+                <div className="grid size-full place-items-center">
+                  <Loader2 className="size-4 animate-spin" />
+                </div>
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={url} alt="Pochette générée" className="size-full object-cover" />
+              )}
+            </button>
+          ))}
+
+        {/* import */}
+        <label className="grid size-24 cursor-pointer place-items-center rounded-2xl border border-dashed border-line text-center text-[11px] font-medium text-ink-soft hover:border-brand/40">
+          {busy === "upload" ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <>
+              <Upload className="mb-1 size-4" />
+              Importer
+            </>
+          )}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) upload(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      </div>
+
+      {error && <p className="mt-2 text-sm font-medium text-brand-strong">{error}</p>}
+    </Card>
   );
 }
 

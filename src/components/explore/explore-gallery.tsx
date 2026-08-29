@@ -3,19 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Headphones, Heart, LayoutGrid, List, Music4 } from "lucide-react";
+import { Cover } from "@/components/explore/cover";
 import type { ExploreItem } from "@/lib/explore";
 
-const GRADIENTS = [
-  "linear-gradient(135deg,#ff6a1a,#e5332a)",
-  "linear-gradient(135deg,#5b1e46,#c0567e)",
-  "linear-gradient(135deg,#1c5b4a,#4fb98f)",
-  "linear-gradient(135deg,#8a5a2b,#e5a44c)",
-  "linear-gradient(135deg,#3a1533,#7a2f6d)",
-];
-function gradient(id: string) {
-  const h = [...id].reduce((a, c) => a + c.charCodeAt(0), 0);
-  return GRADIENTS[h % GRADIENTS.length];
-}
 function fmt(sec: number | null) {
   if (!sec || !Number.isFinite(sec)) return null;
   const m = Math.floor(sec / 60);
@@ -87,14 +77,12 @@ export function ExploreGallery({ items }: { items: ExploreItem[] }) {
                 href={`/inspiration/${it.id}`}
                 className="group block overflow-hidden rounded-3xl border border-line bg-white shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
               >
-                <div
-                  className="grid aspect-square w-full place-items-center p-4 text-center"
-                  style={{ backgroundImage: gradient(it.id) }}
-                >
-                  <span className="font-display text-lg font-extrabold uppercase tracking-wide text-white/90">
-                    {it.occasion ?? "Muzikii"}
-                  </span>
-                </div>
+                <Cover
+                  id={it.id}
+                  occasion={it.occasion}
+                  image={it.coverImage}
+                  className="aspect-square w-full"
+                />
                 <div className="p-4">
                   <p className="truncate font-display text-base font-bold">{it.title}</p>
                   {it.creatorName && (
@@ -134,12 +122,13 @@ export function ExploreGallery({ items }: { items: ExploreItem[] }) {
                 href={`/inspiration/${it.id}`}
                 className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-cream-deep sm:px-4"
               >
-                <span
-                  className="grid size-12 shrink-0 place-items-center rounded-xl text-center text-[10px] font-bold uppercase leading-tight text-white/90"
-                  style={{ backgroundImage: gradient(it.id) }}
-                >
-                  {(it.occasion ?? "Muzikii").slice(0, 10)}
-                </span>
+                <Cover
+                  id={it.id}
+                  occasion={it.occasion}
+                  image={it.coverImage}
+                  className="size-12 shrink-0 overflow-hidden rounded-xl"
+                  labelClassName="text-[8px] font-bold uppercase leading-tight text-white/90 line-clamp-2"
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{it.title}</span>
                   <span className="block truncate text-xs text-ink-soft">

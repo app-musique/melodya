@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Headphones, Heart, Music4 } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { Cover } from "@/components/explore/cover";
 import { FollowButton } from "@/components/creator/follow-button";
 import { getCreatorByHandle, isUserFollowing } from "@/lib/follows";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -77,11 +78,12 @@ export default async function CreatorPage({ params }: Props) {
                   href={`/inspiration/${s.id}`}
                   className="group block overflow-hidden rounded-3xl border border-white/10 bg-white/5 transition-transform hover:-translate-y-0.5"
                 >
-                  <div className="grid aspect-[4/3] w-full place-items-center bg-gradient-to-br from-brand/70 to-brand-strong p-4 text-center">
-                    <span className="font-display text-lg font-extrabold text-white/90">
-                      {s.occasion ?? "Muzikii"}
-                    </span>
-                  </div>
+                  <Cover
+                    id={s.id}
+                    occasion={s.occasion}
+                    image={s.coverImage}
+                    className="aspect-square w-full"
+                  />
                   <div className="p-4">
                     <p className="font-display text-base font-bold">{s.title}</p>
                     <p className="mt-1 flex items-center gap-3 text-xs text-cream/50">

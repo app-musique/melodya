@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Check, Copy, Headphones, Pause, Play, Sparkles } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { SyncedLyrics } from "@/components/explore/synced-lyrics";
+import { Cover } from "@/components/explore/cover";
 import { FollowButton } from "@/components/creator/follow-button";
 import { REACTION_EMOJIS } from "@/lib/domain";
 import type { ExploreDetail } from "@/lib/explore";
@@ -165,11 +166,13 @@ export function InspirationView({
         <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
           {/* Colonne lecteur */}
           <div>
-            <div className="grid aspect-square w-full max-w-sm place-items-center rounded-3xl bg-gradient-to-br from-brand/80 to-brand-strong">
-              <span className="px-6 text-center font-display text-2xl font-extrabold text-white/90">
-                {(item.occasion ?? "Muzikii").toUpperCase()}
-              </span>
-            </div>
+            <Cover
+              id={item.id}
+              occasion={item.occasion}
+              image={item.coverImage}
+              className="aspect-square w-full max-w-sm overflow-hidden rounded-3xl"
+              labelClassName="px-6 text-center font-display text-2xl font-extrabold uppercase text-white/90"
+            />
 
             <div className="mt-5 max-w-sm">
               <p className="text-xs font-semibold uppercase tracking-widest text-gold">

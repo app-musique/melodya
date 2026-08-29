@@ -13,6 +13,8 @@ export type MusicTrack = {
   durationSec: number | null;
   /** Identifiant du clip chez le fournisseur (pour récupérer les timings). */
   providerAudioId?: string | null;
+  /** Pochette générée par le fournisseur (image carrée). */
+  imageUrl?: string | null;
 };
 
 export type MusicResult =
