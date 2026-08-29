@@ -82,8 +82,10 @@ create table if not exists notifications (
 );
 
 create index if not exists notifications_user_idx on notifications (user_id, created_at desc);
+-- Index non partiel : les NULL sont distincts → plusieurs notifs sans dedupe_key OK,
+-- et `on_conflict` peut le cibler (contrairement à un index partiel).
 create unique index if not exists notifications_dedupe_idx
-  on notifications (user_id, dedupe_key) where dedupe_key is not null;
+  on notifications (user_id, dedupe_key);
 
 alter table notifications enable row level security;
 
