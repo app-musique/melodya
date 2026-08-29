@@ -53,9 +53,14 @@ export async function getOwnedSong(id: string): Promise<Song | null> {
 
 export async function listSongs(): Promise<Song[]> {
   const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
   const { data } = await supabase
     .from("songs")
     .select("*")
+    .eq("user_id", user.id) // sinon la policy RLS « vitrines » ferait remonter les showcases
     .order("created_at", { ascending: false });
   return (data as Song[]) ?? [];
 }
@@ -68,9 +73,14 @@ export type SongListItem = Song & {
 /** Comme listSongs, mais joint l'audio de la version choisie (pour l'écoute inline). */
 export async function listSongsWithAudio(): Promise<SongListItem[]> {
   const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
   const { data } = await supabase
     .from("songs")
     .select("*")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   const songs = (data as Song[]) ?? [];
 

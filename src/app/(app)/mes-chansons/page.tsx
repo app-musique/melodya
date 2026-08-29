@@ -2,14 +2,9 @@ import { after } from "next/server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, ChevronDown, Music4, Plus } from "lucide-react";
-import { StatusBadge } from "@/components/song/status-badge";
-import {
-  advanceGeneration,
-  listSongsWithAudio,
-  syncSongAssets,
-  type SongListItem,
-} from "@/lib/songs";
+import { ArrowRight, Music4, Plus } from "lucide-react";
+import { SongLibrary } from "@/components/song/song-library";
+import { advanceGeneration, listSongsWithAudio, syncSongAssets } from "@/lib/songs";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Mes chansons", robots: { index: false } };
@@ -68,11 +63,12 @@ export default async function MesChansonsPage() {
       )}
 
       {active.length > 0 && (
-        <ul className="mt-8 space-y-4">
-          {active.map((s) => (
-            <SongCard key={s.id} song={s} />
-          ))}
-        </ul>
+        <div className="mt-8">
+          <p className="mb-3 text-sm text-ink-soft">
+            Appuie sur une chanson pour l&apos;écouter — les paroles défilent avec la musique.
+          </p>
+          <SongLibrary songs={active} />
+        </div>
       )}
 
       {drafts.length > 0 && (
@@ -93,55 +89,5 @@ export default async function MesChansonsPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function SongCard({ song: s }: { song: SongListItem }) {
-  return (
-    <li className="rounded-3xl border border-line bg-white p-5 shadow-[var(--shadow-soft)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link
-            href={`/mes-chansons/${s.id}`}
-            className="font-display text-lg font-bold hover:text-brand-strong"
-          >
-            {s.recipient_name || "Chanson"}
-          </Link>
-          <p className="truncate text-sm text-ink-soft">
-            {s.occasion || "—"} · {s.music_style || "—"}
-          </p>
-        </div>
-        <StatusBadge status={s.status} />
-      </div>
-
-      {s.status === "ready" && s.audio_url && (
-        <audio controls preload="none" src={s.audio_url} className="mt-3 w-full">
-          <track kind="captions" />
-        </audio>
-      )}
-
-      {s.lyrics && (
-        <details className="group mt-3">
-          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-brand-strong [&::-webkit-details-marker]:hidden">
-            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
-            Paroles
-          </summary>
-          <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink-soft">
-            {s.lyrics}
-          </pre>
-        </details>
-      )}
-
-      <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-xs text-ink-soft">
-        <span>{new Date(s.created_at).toLocaleDateString("fr-FR")}</span>
-        <Link
-          href={`/mes-chansons/${s.id}`}
-          className="inline-flex items-center gap-1 font-semibold text-brand-strong"
-        >
-          Ouvrir
-          <ArrowRight className="size-3.5" />
-        </Link>
-      </div>
-    </li>
   );
 }

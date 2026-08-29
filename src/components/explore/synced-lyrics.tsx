@@ -10,11 +10,13 @@ export function SyncedLyrics({
   timing,
   currentTime,
   duration,
+  heightClass = "h-[420px]",
 }: {
   lyrics: string;
   timing: LyricsTiming | null;
   currentTime: number;
   duration: number;
+  heightClass?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLParagraphElement>(null);
@@ -42,7 +44,7 @@ export function SyncedLyrics({
   return (
     <div
       ref={containerRef}
-      className="h-[420px] overflow-y-auto pr-2 [mask-image:linear-gradient(180deg,transparent,#000_12%,#000_88%,transparent)]"
+      className={`${heightClass} overflow-y-auto pr-2 [mask-image:linear-gradient(180deg,transparent,#000_12%,#000_88%,transparent)]`}
     >
       <div className="space-y-3 py-32">
         {lines.map((l, i) =>
