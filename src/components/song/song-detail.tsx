@@ -70,8 +70,8 @@ export function SongDetail({ initial }: { initial: Bundle }) {
             <div>
               <p className="font-semibold">Création en cours…</p>
               <p className="text-sm text-ink-soft">
-                Notre studio IA compose 3 versions. Ça prend en général moins de 24h — reste sur
-                cette page, elle se met à jour toute seule.
+                Notre studio IA compose plusieurs versions. Ça prend en général quelques minutes —
+                reste sur cette page, elle se met à jour toute seule.
               </p>
             </div>
           </div>
@@ -212,7 +212,9 @@ function VersionPicker({
 
   return (
     <Card>
-      <h2 className="font-display text-lg font-bold">Tes 3 versions</h2>
+      <h2 className="font-display text-lg font-bold">
+        {versions.length > 1 ? `Tes ${versions.length} versions` : "Ta chanson"}
+      </h2>
       <p className="mt-1 text-sm text-ink-soft">
         Écoute-les, choisis ta préférée, puis télécharge.
       </p>

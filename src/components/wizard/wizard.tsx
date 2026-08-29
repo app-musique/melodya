@@ -403,7 +403,7 @@ export function Wizard({
               </>
             )}
             <p className="text-center text-xs text-ink-soft">
-              Paroles, MP3, pochette et 3 versions inclus. Prête en 24h.
+              Paroles, MP3, pochette et 2 versions incluses. Prête en quelques minutes.
             </p>
           </Section>
         )}

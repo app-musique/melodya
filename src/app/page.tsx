@@ -37,7 +37,7 @@ const steps = [
   },
   {
     icon: Mic,
-    title: "On compose 3 versions",
+    title: "On compose 2 versions",
     text: "Notre studio IA compose ta chanson dans le style choisi. Tu écoutes et tu gardes ta préférée.",
   },
   {
@@ -60,7 +60,7 @@ const valueProps = [
   },
   {
     icon: Sparkles,
-    title: "3 versions, pas une seule",
+    title: "2 versions, pas une seule",
     text: "Tu compares, tu choisis. Une régénération offerte si aucune ne te convient.",
   },
   {
@@ -117,7 +117,7 @@ const examples: Example[] = [
 
 const included = [
   "Paroles personnalisées écrites par l'IA + relecture éditable",
-  "3 versions au choix dans le style et la voix que tu veux",
+  "2 versions au choix dans le style et la voix que tu veux",
   "Fichier MP3 haute qualité",
   "Pochette générée à ton nom",
   "Page cadeau avec QR code à partager",

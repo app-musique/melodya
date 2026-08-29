@@ -5,8 +5,9 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getMusicProvider } from "@/lib/music";
 import { generateLyrics } from "@/lib/lyrics";
 import { CURRENCY } from "@/lib/pricing";
-import { getCreditsPerSong, spendCreditForSong } from "@/lib/credits";
+import { getCreditsPerSong, grantCredits, spendCreditForSong } from "@/lib/credits";
 import { notify } from "@/lib/notifications";
+import { persistAudio } from "@/lib/media";
 import type { GiftReaction, Song, SongVersion, SongAsset } from "@/lib/domain";
 import { env } from "@/lib/env";
 
@@ -224,10 +225,19 @@ export async function startGeneration(songId: string): Promise<void> {
       .update({ provider: provider.name, provider_job_id: jobId })
       .eq("id", songId);
   } catch (err) {
+    // Échec avant même la création du job : on rembourse le crédit Melodya
+    // (le fournisseur n'a rien produit) et on renvoie la chanson en brouillon.
+    await grantCredits(song.user_id, song.credits_cost || 1, "refund");
     await admin
       .from("songs")
-      .update({ status: "failed", error: (err as Error).message })
+      .update({ status: "draft", error: (err as Error).message, generation_started_at: null })
       .eq("id", songId);
+    await notify(song.user_id, {
+      type: "song_failed",
+      title: "La création n'a pas pu démarrer",
+      body: "Ton crédit t'a été rendu. Réessaie depuis le wizard.",
+      link: "/mes-chansons",
+    });
   }
 }
 
@@ -291,10 +301,19 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     return current as Song;
   }
 
-  const tracks = result.tracks.slice(0, 3);
+  const tracks = result.tracks.slice(0, 4);
+
+  // Re-héberge l'audio (les URLs des fournisseurs expirent).
+  const persisted = await Promise.all(
+    tracks.map(async (t, i) => ({
+      ...t,
+      url: await persistAudio(songId, i + 1, t.url),
+    })),
+  );
+
   await admin.from("song_versions").delete().eq("song_id", songId);
   await admin.from("song_versions").insert(
-    tracks.map((t, i) => ({
+    persisted.map((t, i) => ({
       song_id: songId,
       idx: i + 1,
       audio_url: t.url,
@@ -310,10 +329,29 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     url: `${env.siteUrl}/api/cover/${songId}`,
   });
 
+  // Timings de paroles réels si le fournisseur les expose.
+  const provider2 = getMusicProvider();
+  const firstAudioId = tracks[0]?.providerAudioId;
+  const lyricsText = (claimed as Song).lyrics;
+  if (provider2.getLineTimings && firstAudioId && lyricsText && song.provider_job_id) {
+    try {
+      const timings = await provider2.getLineTimings(
+        song.provider_job_id,
+        firstAudioId,
+        lyricsText,
+      );
+      if (timings && timings.length) {
+        await admin.from("songs").update({ lyrics_timing: timings }).eq("id", songId);
+      }
+    } catch {
+      // tant pis, fallback réparti côté client
+    }
+  }
+
   await notify((claimed as Song).user_id, {
     type: "song_ready",
     title: "Ta chanson est prête 🎉",
-    body: `${(claimed as Song).recipient_name ?? "Ta chanson"} — écoute les 3 versions et choisis ta préférée.`,
+    body: `${(claimed as Song).recipient_name ?? "Ta chanson"} — écoute les versions et choisis ta préférée.`,
     link: `/mes-chansons/${songId}`,
     dedupeKey: `song_ready:${songId}`,
   });
