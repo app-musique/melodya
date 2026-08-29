@@ -18,7 +18,13 @@ export function AuthForm() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    const e = params.get("error");
+    if (!e) return null;
+    return e === "auth"
+      ? "La connexion a échoué. Réessaie."
+      : `Connexion impossible : ${decodeURIComponent(e)}`;
+  });
 
   const supabase = createClient();
   const callbackUrl = () =>
