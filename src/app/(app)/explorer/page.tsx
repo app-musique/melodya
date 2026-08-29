@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Compass, Headphones } from "lucide-react";
+import { Compass, Headphones, Heart } from "lucide-react";
 import { listExplore } from "@/lib/explore";
 import { occasions } from "@/lib/site";
 import { MUSIC_STYLES } from "@/lib/domain";
@@ -55,15 +55,14 @@ export default async function ExplorerPage({ searchParams }: Props) {
 
       {items.length === 0 ? (
         <div className="mt-10 rounded-3xl border border-dashed border-line bg-white p-10 text-center text-sm text-ink-soft">
-          Rien ici pour ce filtre. Bientôt, les créations partagées par la communauté
-          apparaîtront aussi.
+          Rien ici pour ce filtre. Essaie une autre occasion ou un autre style.
         </div>
       ) : (
         <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((it) => (
             <li key={it.id}>
               <Link
-                href={`/explorer/${it.id}`}
+                href={`/inspiration/${it.id}`}
                 className="group block overflow-hidden rounded-3xl border border-line bg-white shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
               >
                 <div className="grid aspect-[4/3] w-full place-items-center bg-gradient-to-br from-plum to-brand-strong p-4 text-center">
@@ -73,15 +72,21 @@ export default async function ExplorerPage({ searchParams }: Props) {
                 </div>
                 <div className="p-4">
                   <p className="font-display text-base font-bold">{it.title}</p>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-soft">
-                    <span>
+                  <p className="mt-0.5 flex items-center gap-2 text-xs text-ink-soft">
+                    <span className="truncate">
                       {it.artist ? `${it.artist} · ` : ""}
                       {it.style ?? "—"}
                     </span>
-                    <span className="ml-auto inline-flex items-center gap-1">
+                    <span className="ml-auto inline-flex shrink-0 items-center gap-1">
                       <Headphones className="size-3.5" />
                       {it.plays}
                     </span>
+                    {it.reactions > 0 && (
+                      <span className="inline-flex shrink-0 items-center gap-1">
+                        <Heart className="size-3.5" />
+                        {it.reactions}
+                      </span>
+                    )}
                   </p>
                 </div>
               </Link>
