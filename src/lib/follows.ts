@@ -84,12 +84,14 @@ export async function getCreatorByHandle(handle: string): Promise<CreatorProfile
   if (!prof) return null;
   const p = prof as { id: string; handle: string; full_name: string | null };
 
+  // Chansons du créateur visibles publiquement : partagées avec les abonnés,
+  // ou vitrines (une vitrine est déjà « rendue visible » par son créateur).
   const { data: rows } = await admin
     .from("songs")
     .select("id, showcase_title, occasion, music_style, created_at")
     .eq("user_id", p.id)
-    .eq("shared_with_followers", true)
     .eq("status", "ready")
+    .or("shared_with_followers.eq.true,is_showcase.eq.true")
     .order("created_at", { ascending: false })
     .limit(60);
 
@@ -124,16 +126,19 @@ export async function isUserFollowing(creatorId: string, userId: string): Promis
   return (count ?? 0) > 0;
 }
 
+/** Doublon d'abonnement (index unique partiel → géré à l'insert, pas en on_conflict). */
+const isDuplicate = (msg: string) => /duplicate key|already exists|unique/i.test(msg);
+
 export async function followAsUser(
   creatorId: string,
   userId: string,
 ): Promise<{ ok: boolean; error?: string; followerCount: number }> {
   if (creatorId === userId) return { ok: false, error: "Tu ne peux pas t'abonner à toi-même", followerCount: 0 };
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("follows")
-    .upsert({ creator_id: creatorId, follower_user_id: userId }, { onConflict: "creator_id,follower_user_id", ignoreDuplicates: true });
-  if (error) return { ok: false, error: error.message, followerCount: await followerCount(creatorId) };
+  const { error } = await admin.from("follows").insert({ creator_id: creatorId, follower_user_id: userId });
+  if (error && !isDuplicate(error.message)) {
+    return { ok: false, error: error.message, followerCount: await followerCount(creatorId) };
+  }
   return { ok: true, followerCount: await followerCount(creatorId) };
 }
 
@@ -158,10 +163,10 @@ export async function followAsEmail(
   const { data: creator } = await admin.from("profiles").select("id").eq("id", creatorId).maybeSingle();
   if (!creator) return { ok: false, error: "Créateur introuvable", followerCount: 0 };
 
-  const { error } = await admin
-    .from("follows")
-    .upsert({ creator_id: creatorId, follower_email: email }, { onConflict: "creator_id,follower_email", ignoreDuplicates: true });
-  if (error) return { ok: false, error: error.message, followerCount: await followerCount(creatorId) };
+  const { error } = await admin.from("follows").insert({ creator_id: creatorId, follower_email: email });
+  if (error && !isDuplicate(error.message)) {
+    return { ok: false, error: error.message, followerCount: await followerCount(creatorId) };
+  }
   return { ok: true, followerCount: await followerCount(creatorId) };
 }
 
