@@ -1,11 +1,65 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup";
+
+/**
+ * Client ID Google (public). S'il est défini, on utilise Google Identity Services
+ * (bouton officiel + signInWithIdToken) : tout le flux reste sur muzikii.com,
+ * l'URL …supabase.co n'apparaît jamais. Sinon, repli sur signInWithOAuth (redirect).
+ */
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const GSI_SRC = "https://accounts.google.com/gsi/client";
+
+type GoogleIdApi = {
+  accounts: {
+    id: {
+      initialize: (config: Record<string, unknown>) => void;
+      renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+    };
+  };
+};
+declare global {
+  interface Window {
+    google?: GoogleIdApi;
+  }
+}
+
+/** Charge le SDK GIS et attend que `google.accounts.id` soit réellement prêt. */
+function waitForGis(): Promise<GoogleIdApi | null> {
+  return new Promise((resolve) => {
+    if (window.google?.accounts?.id) return resolve(window.google);
+    if (!document.querySelector(`script[src="${GSI_SRC}"]`)) {
+      const s = document.createElement("script");
+      s.src = GSI_SRC;
+      s.async = true;
+      document.head.appendChild(s);
+    }
+    let tries = 0;
+    const iv = window.setInterval(() => {
+      if (window.google?.accounts?.id) {
+        window.clearInterval(iv);
+        resolve(window.google);
+      } else if (++tries > 120) {
+        window.clearInterval(iv);
+        resolve(null);
+      }
+    }, 50);
+  });
+}
+
+async function generateNonce(): Promise<[string, string]> {
+  const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+  const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(nonce));
+  const hashedNonce = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return [nonce, hashedNonce];
+}
 
 export function AuthForm() {
   const router = useRouter();
@@ -25,12 +79,100 @@ export function AuthForm() {
       ? "La connexion a échoué. Réessaie."
       : `Connexion impossible : ${decodeURIComponent(e)}`;
   });
+  const [gsiFailed, setGsiFailed] = useState(false);
 
   const [supabase] = useState(() => createClient());
+  const gsiRef = useRef<HTMLDivElement>(null);
+  const nonceRef = useRef<string | null>(null);
+
   const callbackUrl = () =>
     `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
-  async function handleGoogle() {
+  const finishSignIn = useCallback(() => {
+    router.push(next);
+    router.refresh();
+  }, [next, router]);
+
+  const onGoogleCredential = useCallback(
+    async (response: { credential?: string }) => {
+      if (!response.credential) return;
+      setLoading(true);
+      setError(null);
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: response.credential,
+        nonce: nonceRef.current ?? undefined,
+      });
+      if (error) {
+        setError(`Connexion Google impossible : ${error.message}`);
+        setLoading(false);
+        return;
+      }
+      finishSignIn();
+    },
+    [supabase, finishSignIn],
+  );
+
+  // Callback à jour sans faire redémarrer l'effet GSI.
+  const credentialRef = useRef(onGoogleCredential);
+  useEffect(() => {
+    credentialRef.current = onGoogleCredential;
+  }, [onGoogleCredential]);
+
+  // --- Google Identity Services (si NEXT_PUBLIC_GOOGLE_CLIENT_ID) ---
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const gis = await waitForGis();
+        if (cancelled || !gsiRef.current) return;
+        if (!gis) {
+          setGsiFailed(true);
+          return;
+        }
+        const [nonce, hashedNonce] = await generateNonce();
+        if (cancelled || !gsiRef.current) return;
+        nonceRef.current = nonce;
+        gis.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: (r: { credential?: string }) => credentialRef.current(r),
+          nonce: hashedNonce,
+          use_fedcm_for_prompt: true,
+        });
+        gsiRef.current.innerHTML = "";
+        gis.accounts.id.renderButton(gsiRef.current, {
+          type: "standard",
+          theme: "outline",
+          size: "large",
+          text: "continue_with",
+          shape: "pill",
+          logo_alignment: "left",
+          locale: "fr",
+        });
+      } catch {
+        setGsiFailed(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Filet indépendant : si le bouton Google ne s'est pas affiché (client ID /
+  // origine non autorisée, réseau…), on bascule sur le bouton redirect.
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+    const t = window.setTimeout(() => {
+      if (gsiRef.current && gsiRef.current.childElementCount === 0) setGsiFailed(true);
+    }, 4000);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  // Repli : bouton redirect classique (pas de client ID, ou GSI KO).
+  async function handleGoogleRedirect() {
     setError(null);
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -77,9 +219,10 @@ export function AuthForm() {
       }
     }
 
-    router.push(next);
-    router.refresh();
+    finishSignIn();
   }
+
+  const useGsi = !!GOOGLE_CLIENT_ID && !gsiFailed;
 
   return (
     <div className="w-full">
@@ -104,15 +247,19 @@ export function AuthForm() {
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={handleGoogle}
-        disabled={loading}
-        className="flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-white py-3 font-semibold transition-colors hover:bg-cream-deep disabled:opacity-60"
-      >
-        <GoogleIcon />
-        Continuer avec Google
-      </button>
+      {useGsi ? (
+        <div ref={gsiRef} className="flex min-h-[44px] justify-center" />
+      ) : (
+        <button
+          type="button"
+          onClick={handleGoogleRedirect}
+          disabled={loading}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-white py-3 font-semibold transition-colors hover:bg-cream-deep disabled:opacity-60"
+        >
+          <GoogleIcon />
+          Continuer avec Google
+        </button>
+      )}
 
       <div className="my-5 flex items-center gap-3 text-xs text-ink-soft">
         <span className="h-px flex-1 bg-line" />
