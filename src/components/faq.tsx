@@ -38,7 +38,7 @@ const items = [
   },
   {
     q: "À qui appartient la chanson ?",
-    a: "Elle est à toi. Tu peux l'offrir, la diffuser lors de ton événement et la partager avec tes proches. Melodya ne revend pas les chansons créées par les utilisateurs.",
+    a: "Elle est à toi. Tu peux l'offrir, la diffuser lors de ton événement et la partager avec tes proches. Muzikii ne revend pas les chansons créées par les utilisateurs.",
   },
 ];
 

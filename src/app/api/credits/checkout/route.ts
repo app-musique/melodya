@@ -55,9 +55,9 @@ export async function POST(req: Request) {
       paymentId,
       amount,
       currency: pack.currency || CURRENCY,
-      description: `Melodya — pack ${pack.name} (${pack.credits} crédits)`,
+      description: `Muzikii — pack ${pack.name} (${pack.credits} crédits)`,
       returnUrl,
-      customer: { email: user!.email ?? "client@melodya.app" },
+      customer: { email: user!.email ?? "client@muzikii.com" },
     });
   } catch (err) {
     return apiError(`Initialisation du paiement impossible : ${(err as Error).message}`, 502);

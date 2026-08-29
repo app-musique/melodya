@@ -189,7 +189,7 @@ export function ClipStage({
       ctx.textAlign = "left";
       ctx.fillStyle = "rgba(255,244,230,0.5)";
       ctx.font = `700 ${Math.round(15 * base)}px system-ui, -apple-system, sans-serif`;
-      ctx.fillText("Melodya", px0, H - 34 * base);
+      ctx.fillText("Muzikii", px0, H - 34 * base);
       ctx.textAlign = "center";
     },
     [lyrics, timing, occasion, dedication, recipientName],
@@ -307,7 +307,7 @@ export function ClipStage({
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `melodya-clip-${aspect.replace(":", "x")}.${ext}`;
+        link.download = `muzikii-clip-${aspect.replace(":", "x")}.${ext}`;
         document.body.appendChild(link);
         link.click();
         link.remove();

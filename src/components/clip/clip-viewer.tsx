@@ -90,7 +90,7 @@ export function ClipViewer({
       <footer className="mt-6 text-xs text-cream/50">
         Créée avec{" "}
         <Link href="/" className="font-semibold text-gold">
-          Melodya
+          Muzikii
         </Link>
       </footer>
     </div>

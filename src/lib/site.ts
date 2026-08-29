@@ -1,6 +1,6 @@
 export const site = {
-  name: "Melodya",
-  supportEmail: "contact@melodya.app",
+  name: "Muzikii",
+  supportEmail: "contact@muzikii.com",
 };
 
 // Lien vers le tunnel de commande.

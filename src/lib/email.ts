@@ -10,7 +10,7 @@ import {
 
 type Mail = { subject: string; html: string; text: string };
 
-const DEFAULT_FROM = "Melodya <muzikii2026@gmail.com>";
+const DEFAULT_FROM = "Muzikii <muzikii2026@gmail.com>";
 
 /** `Nom <email@x>` ou `email@x` → { name?, email }. */
 function parseSender(raw: string | undefined): { name?: string; email: string } {

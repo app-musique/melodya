@@ -33,7 +33,7 @@ export const env = {
   monerooWebhookSecret: clean(process.env.MONEROO_WEBHOOK_SECRET),
 
   brevoApiKey: clean(process.env.BREVO_API_KEY),
-  emailFrom: clean(process.env.EMAIL_FROM) ?? "Melodya <muzikii2026@gmail.com>",
+  emailFrom: clean(process.env.EMAIL_FROM) ?? "Muzikii <muzikii2026@gmail.com>",
   emailReplyTo: clean(process.env.EMAIL_REPLY_TO),
 
   cronSecret: clean(process.env.CRON_SECRET),

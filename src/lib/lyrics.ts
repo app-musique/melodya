@@ -24,7 +24,7 @@ function brief(song: Song): string {
 
 export function buildLyricsPrompt(song: Song, instructions?: string) {
   const system = [
-    "Tu es parolier professionnel pour Melodya, un service de chansons personnalisées.",
+    "Tu es parolier professionnel pour Muzikii, un service de chansons personnalisées.",
     "Tu écris des paroles originales, chaleureuses et chantables, jamais niaises.",
     "Structure attendue : un titre, puis des sections balisées [Couplet 1], [Refrain], [Couplet 2], [Pont], [Refrain], [Outro].",
     "Le refrain revient à l'identique. Rimes naturelles, phrases courtes, vocabulaire concret.",
@@ -124,5 +124,5 @@ export async function generateLyrics(
     .trim();
 
   if (!raw) return mockLyrics(song);
-  return parseLyrics(raw, `${song.recipient_name ?? "Une chanson"} — Melodya`);
+  return parseLyrics(raw, `${song.recipient_name ?? "Une chanson"} — Muzikii`);
 }

@@ -8,7 +8,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 
 export const metadata: Metadata = {
   title: "Connexion",
-  description: "Connecte-toi pour créer et retrouver tes chansons Melodya.",
+  description: "Connecte-toi pour créer et retrouver tes chansons Muzikii.",
 };
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export default async function ConnexionPage() {
       <main className="flex flex-1 items-center justify-center px-5 py-14">
         <div className="w-full max-w-md">
           <h1 className="text-center font-display text-3xl font-extrabold tracking-tight">
-            Bienvenue sur <span className="text-gradient-brand">Melodya</span>
+            Bienvenue sur <span className="text-gradient-brand">Muzikii</span>
           </h1>
           <p className="mt-2 text-center text-sm text-ink-soft">
             Crée ta chanson personnalisée en quelques minutes.

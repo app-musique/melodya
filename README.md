@@ -1,4 +1,4 @@
-# Melodya — SaaS de chanson personnalisée par IA
+# Muzikii — SaaS de chanson personnalisée par IA
 
 Application Next.js : de la landing page au tunnel de commande, génération des paroles (Claude)
 et de la musique (Suno), paiement Mobile Money (Moneroo), espace personnel et page cadeau

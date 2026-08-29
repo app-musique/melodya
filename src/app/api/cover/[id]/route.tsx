@@ -53,7 +53,7 @@ export async function GET(_req: Request, { params }: Params) {
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", fontSize: 30, fontWeight: 700 }}>♫ Melodya</div>
+        <div style={{ display: "flex", fontSize: 30, fontWeight: 700 }}>♫ Muzikii</div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", fontSize: 34, opacity: 0.85, letterSpacing: 2 }}>
             {occasion.toUpperCase()}

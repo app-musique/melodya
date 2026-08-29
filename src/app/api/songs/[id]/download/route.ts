@@ -37,8 +37,8 @@ export async function GET(req: Request, { params }: Params) {
 
   const ext = version.audio_url.split(".").pop()?.split("?")[0] || "mp3";
   const base = slugify(
-    `${bundle.song.recipient_name ?? "melodya"}-${bundle.song.occasion ?? ""}`,
-  ) || "melodya";
+    `${bundle.song.recipient_name ?? "muzikii"}-${bundle.song.occasion ?? ""}`,
+  ) || "muzikii";
   const filename = `${base}-v${version.idx}.${ext}`;
 
   return new Response(upstream.body, {
