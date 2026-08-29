@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { InspirationView } from "@/components/explore/inspiration-view";
 import { getExploreSong } from "@/lib/explore";
+import { getCreatorMini, isUserFollowing } from "@/lib/follows";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 
 type Props = { params: Promise<{ id: string }> };
@@ -28,5 +30,19 @@ export default async function InspirationPage({ params }: Props) {
   const { id } = await params;
   const item = await getExploreSong(id);
   if (!item) notFound();
-  return <InspirationView item={item} />;
+
+  const [creator, user] = await Promise.all([getCreatorMini(item.creatorId), getCurrentUser()]);
+  const following =
+    creator && user ? await isUserFollowing(creator.id, user.id) : false;
+  const selfCreator = !!user && !!creator && user.id === creator.id;
+
+  return (
+    <InspirationView
+      item={item}
+      creator={creator}
+      isLoggedIn={!!user}
+      following={following}
+      selfCreator={selfCreator}
+    />
+  );
 }

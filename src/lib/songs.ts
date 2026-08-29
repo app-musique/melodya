@@ -396,7 +396,15 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     url: `${env.siteUrl}/api/cover/${songId}`,
   });
 
-  await admin.from("songs").update({ assets_synced_at: null }).eq("id", songId);
+  // Lien de partage actif par défaut dès que la chanson est prête (slug
+  // indevinable). L'utilisateur peut le repasser en privé depuis sa fiche.
+  const ready = claimed as Song;
+  const shareUpdate: Record<string, unknown> = { assets_synced_at: null };
+  if (!ready.is_showcase) {
+    shareUpdate.is_public = true;
+    shareUpdate.gift_slug = ready.gift_slug ?? nanoid(12).toLowerCase();
+  }
+  await admin.from("songs").update(shareUpdate).eq("id", songId);
 
   const createdNotif = await notify((claimed as Song).user_id, {
     type: "song_ready",

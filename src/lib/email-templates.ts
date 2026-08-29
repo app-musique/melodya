@@ -16,6 +16,7 @@ function shell(opts: {
   ctaLabel?: string;
   ctaHref?: string;
   outro?: string;
+  unsubscribeHref?: string;
 }): string {
   const button =
     opts.ctaLabel && opts.ctaHref
@@ -45,7 +46,11 @@ function shell(opts: {
       </td></tr>
       <tr><td style="padding:16px 28px;border-top:1px solid #ece3ee;color:${SOFT};font-size:12px;line-height:1.6">
         Muzikii — ta chanson personnalisée par IA.<br>
-        Tu reçois cet email suite à ton activité sur Muzikii. Gère tes alertes dans ton profil › Réglages.
+        ${
+          opts.unsubscribeHref
+            ? `Tu reçois cet email parce que tu suis ce créateur. <a href="${opts.unsubscribeHref}" style="color:${SOFT}">Se désabonner</a>.`
+            : "Tu reçois cet email suite à ton activité sur Muzikii. Gère tes alertes dans ton profil › Réglages."
+        }
       </td></tr>
     </table>
   </td></tr>
@@ -111,6 +116,32 @@ export function giftReactionTpl(o: {
       ctaHref: `${o.siteUrl}/mes-chansons/${o.songId}`,
     }),
     text: `${who} a réagi à ton cadeau ${o.emoji}${o.message ? ` : « ${o.message} »` : ""}. ${o.siteUrl}/mes-chansons/${o.songId}`,
+  };
+}
+
+export function creatorNewSongTpl(o: {
+  creatorName: string;
+  songTitle: string;
+  occasion: string | null;
+  songId: string;
+  unsubscribeHref: string;
+  siteUrl: string;
+}): Mail {
+  const what = o.occasion ? `${o.occasion} · ` : "";
+  return {
+    subject: `${o.creatorName} vient de publier « ${o.songTitle} » 🎵`,
+    html: shell({
+      preview: `Nouvelle chanson de ${o.creatorName} à écouter.`,
+      heading: `Nouvelle chanson de ${o.creatorName}`,
+      intro: `${o.creatorName} vient de partager une nouvelle chanson avec ses abonnés : <strong>${o.songTitle}</strong>${
+        o.occasion ? ` (${o.occasion})` : ""
+      }. Écoute-la et laisse une réaction.`,
+      ctaLabel: "Écouter la chanson",
+      ctaHref: `${o.siteUrl}/inspiration/${o.songId}`,
+      outro: `${what}par ${o.creatorName} sur Muzikii.`,
+      unsubscribeHref: o.unsubscribeHref,
+    }),
+    text: `${o.creatorName} a publié « ${o.songTitle} ». Écoute : ${o.siteUrl}/inspiration/${o.songId}\nSe désabonner : ${o.unsubscribeHref}`,
   };
 }
 

@@ -5,8 +5,10 @@ import Link from "next/link";
 import { ArrowRight, Check, Copy, Headphones, Pause, Play, Sparkles } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { SyncedLyrics } from "@/components/explore/synced-lyrics";
+import { FollowButton } from "@/components/creator/follow-button";
 import { REACTION_EMOJIS } from "@/lib/domain";
 import type { ExploreDetail } from "@/lib/explore";
+import type { CreatorMini } from "@/lib/follows";
 
 function fmt(s: number) {
   if (!Number.isFinite(s)) return "0:00";
@@ -29,7 +31,19 @@ function reactorKey(): string {
   }
 }
 
-export function InspirationView({ item }: { item: ExploreDetail }) {
+export function InspirationView({
+  item,
+  creator,
+  isLoggedIn,
+  following,
+  selfCreator,
+}: {
+  item: ExploreDetail;
+  creator: CreatorMini | null;
+  isLoggedIn: boolean;
+  following: boolean;
+  selfCreator: boolean;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
@@ -208,6 +222,33 @@ export function InspirationView({ item }: { item: ExploreDetail }) {
                 </>
               ) : (
                 <p className="mt-4 text-sm text-cream/60">Aperçu audio bientôt disponible.</p>
+              )}
+
+              {/* Créateur — n'importe qui peut s'abonner, même sans compte */}
+              {creator && (
+                <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <Link href={`/createur/${creator.handle}`} className="flex items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand/80 to-brand-strong text-sm font-extrabold">
+                      {creator.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-xs text-cream/50">Par</span>
+                      <span className="block truncate font-semibold">{creator.name}</span>
+                    </span>
+                  </Link>
+                  {selfCreator ? (
+                    <span className="shrink-0 text-xs text-cream/50">C&apos;est toi 🎤</span>
+                  ) : (
+                    <div className="shrink-0">
+                      <FollowButton
+                        handle={creator.handle}
+                        isLoggedIn={isLoggedIn}
+                        initialFollowing={following}
+                        initialCount={creator.followerCount}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Réactions — visibles par tous, ouvertes à tous */}

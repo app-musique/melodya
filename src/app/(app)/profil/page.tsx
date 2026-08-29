@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { getCurrentProfile, listTransactions } from "@/lib/credits";
 import { getUserLoyalty } from "@/lib/loyalty";
 import { getReferralStats } from "@/lib/referral";
+import { getFollowStats } from "@/lib/follows";
 import { listSongs } from "@/lib/songs";
 import { env } from "@/lib/env";
 import type { CreditTransaction } from "@/lib/domain";
@@ -26,12 +27,13 @@ export default async function ProfilPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
 
-  const [profile, songs, txns, loyalty, referral] = await Promise.all([
+  const [profile, songs, txns, loyalty, referral, followStats] = await Promise.all([
     getCurrentProfile(),
     listSongs(),
     listTransactions(user.id),
     getUserLoyalty(user.id),
     getReferralStats(user.id),
+    getFollowStats(user.id),
   ]);
 
   const loyaltyProgress =
@@ -61,7 +63,29 @@ export default async function ProfilPage() {
           {profile?.full_name || "Mon compte"}
         </h1>
         <p className="text-sm text-ink-soft">{user.email}</p>
+        {profile?.handle && (
+          <Link
+            href={`/createur/${profile.handle}`}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-strong"
+          >
+            Voir mon profil public
+            <ArrowRight className="size-3.5" />
+          </Link>
+        )}
       </div>
+
+      {(followStats.followers > 0 || followStats.following > 0) && (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-line bg-white p-4 text-center">
+            <p className="font-display text-lg font-extrabold">{followStats.followers}</p>
+            <p className="text-xs text-ink-soft">Abonné{followStats.followers > 1 ? "s" : ""}</p>
+          </div>
+          <div className="rounded-2xl border border-line bg-white p-4 text-center">
+            <p className="font-display text-lg font-extrabold">{followStats.following}</p>
+            <p className="text-xs text-ink-soft">Abonnements</p>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 grid grid-cols-3 gap-3">
         {[

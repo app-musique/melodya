@@ -3,14 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  BellRing,
   Check,
   Clapperboard,
   Clock,
   Copy,
   Download,
+  ExternalLink,
   Eye,
   Headphones,
   Loader2,
+  Lock,
   Music4,
   RefreshCw,
   Share2,
@@ -104,6 +107,7 @@ export function SongDetail({ initial }: { initial: Bundle }) {
         <>
           <VersionPicker bundle={bundle} onChange={setBundle} />
           <ShareCard song={song} />
+          <SubscribersCard song={song} />
           <Link
             href={`/studio/${song.id}`}
             className="flex items-center gap-3 rounded-3xl border border-line bg-white p-5 shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
@@ -316,42 +320,143 @@ function ShareCard({ song }: { song: Song }) {
     setBusy(false);
   }
 
+  function copy() {
+    navigator.clipboard.writeText(url).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  // Lien privé : bloc discret pour réactiver.
+  if (!isPublic || !url) {
+    return (
+      <Card>
+        <div className="flex items-center gap-2">
+          <Lock className="size-4 text-ink-soft" />
+          <h2 className="font-display text-lg font-bold">Lien de partage désactivé</h2>
+        </div>
+        <p className="mt-1 text-sm text-ink-soft">
+          Ta chanson n&apos;est accessible que par toi.
+        </p>
+        <Button variant="outline" loading={busy} className="mt-4" onClick={() => toggle(true)}>
+          <Share2 className="size-4" />
+          Réactiver le lien de partage
+        </Button>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="rounded-3xl border border-brand/30 bg-brand/5 p-6">
+      <div className="flex items-center gap-2">
+        <Share2 className="size-4 text-brand-strong" />
+        <h2 className="font-display text-lg font-bold">Partage ta chanson</h2>
+      </div>
+      <p className="mt-1 text-sm text-ink-soft">
+        Envoie ce lien à la personne — page dédiée avec lecteur, dédicace et réactions.
+      </p>
+
+      <div className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-white p-3">
+        <input
+          readOnly
+          value={url}
+          onFocus={(e) => e.currentTarget.select()}
+          className="flex-1 bg-transparent text-xs outline-none"
+        />
+        <button
+          onClick={copy}
+          className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white"
+        >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          {copied ? "Copié" : "Copier"}
+        </button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(`Une chanson rien que pour toi 🎶 ${url}`)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-white"
+        >
+          WhatsApp
+        </a>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold"
+        >
+          <ExternalLink className="size-3.5" />
+          Voir la page
+        </a>
+        <button
+          onClick={() => toggle(false)}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-ink-soft hover:text-ink"
+        >
+          <Lock className="size-3.5" />
+          Rendre privé
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SubscribersCard({ song }: { song: Song }) {
+  const [shared, setShared] = useState(song.shared_with_followers);
+  const [busy, setBusy] = useState(false);
+  const [justShared, setJustShared] = useState(false);
+
+  async function toggle(value: boolean) {
+    setBusy(true);
+    const res = await fetch(`/api/songs/${song.id}/followers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shared: value }),
+    });
+    if (res.ok) {
+      setShared(value);
+      if (value && !song.followers_notified_at) setJustShared(true);
+    }
+    setBusy(false);
+  }
+
   return (
     <Card>
       <div className="flex items-center gap-2">
-        <Share2 className="size-4 text-brand-strong" />
-        <h2 className="font-display text-lg font-bold">Page cadeau</h2>
+        <BellRing className="size-4 text-brand-strong" />
+        <h2 className="font-display text-lg font-bold">Partager avec mes abonnés</h2>
       </div>
       <p className="mt-1 text-sm text-ink-soft">
-        Active un lien public avec dédicace et lecteur, à envoyer à la personne le jour J.
+        La chanson apparaît sur ton profil public et tes abonnés sont prévenus (une seule fois).
       </p>
 
       <label className="mt-4 flex items-center gap-3 text-sm font-medium">
         <input
           type="checkbox"
-          checked={isPublic}
+          checked={shared}
           disabled={busy}
           onChange={(e) => toggle(e.target.checked)}
           className="size-4"
         />
-        Rendre la page cadeau publique
+        {shared ? "Visible par mes abonnés" : "Partager avec mes abonnés"}
       </label>
 
-      {isPublic && url && (
-        <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-cream-deep p-3">
-          <input readOnly value={url} className="flex-1 bg-transparent text-xs outline-none" />
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(url);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-strong"
-          >
-            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            {copied ? "Copié" : "Copier"}
-          </button>
-        </div>
+      {justShared && (
+        <p className="mt-3 rounded-xl bg-brand/10 px-3 py-2 text-xs font-medium text-brand-strong">
+          C&apos;est parti — tes abonnés reçoivent la notification.
+        </p>
+      )}
+      {shared && (
+        <a
+          href={`/inspiration/${song.id}`}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-strong"
+        >
+          <ExternalLink className="size-3.5" />
+          Voir la page publique
+        </a>
       )}
     </Card>
   );
