@@ -26,7 +26,6 @@ export async function GET() {
     payments: isMockPayments ? "mock" : "moneroo",
     email: isMockEmail ? "mock" : "brevo",
     cronSecretSet: !!env.cronSecret,
-    googleClientIdSet: !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     siteUrl: env.siteUrl,
   });
 }
