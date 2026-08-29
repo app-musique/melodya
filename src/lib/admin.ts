@@ -1,6 +1,8 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Song } from "@/lib/domain";
+import { getSunoCredits } from "@/lib/music/suno";
+import { isMockEmail, isMockLyrics, isMockMusic, isMockPayments } from "@/lib/env";
+import type { AppError, Song } from "@/lib/domain";
 
 export async function getAdminStats() {
   const admin = createAdminClient();
@@ -28,6 +30,62 @@ export async function getAdminStats() {
     revenue,
     creditsSold,
   };
+}
+
+export type SystemHealth = {
+  integrations: {
+    music: "mock" | "suno";
+    lyrics: "template" | "claude";
+    payments: "mock" | "moneroo";
+    email: "mock" | "resend";
+  };
+  sunoBalance: number | null;
+  generating: number;
+  assetsPending: number;
+  failed7d: number;
+};
+
+export async function getSystemHealth(): Promise<SystemHealth> {
+  const admin = createAdminClient();
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+
+  const [sunoBalance, gen, pending, failed] = await Promise.all([
+    getSunoCredits(),
+    admin.from("songs").select("id", { count: "exact", head: true }).eq("status", "generating"),
+    admin
+      .from("songs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "ready")
+      .is("assets_synced_at", null),
+    admin
+      .from("songs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "failed")
+      .gte("created_at", weekAgo),
+  ]);
+
+  return {
+    integrations: {
+      music: isMockMusic ? "mock" : "suno",
+      lyrics: isMockLyrics ? "template" : "claude",
+      payments: isMockPayments ? "mock" : "moneroo",
+      email: isMockEmail ? "mock" : "resend",
+    },
+    sunoBalance,
+    generating: gen.count ?? 0,
+    assetsPending: pending.count ?? 0,
+    failed7d: failed.count ?? 0,
+  };
+}
+
+export async function listErrors(limit = 50): Promise<AppError[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("app_errors")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data as AppError[]) ?? [];
 }
 
 export type AdminSongRow = Pick<

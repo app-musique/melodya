@@ -1,9 +1,10 @@
+import { after } from "next/server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, Music4, Plus } from "lucide-react";
 import { StatusBadge } from "@/components/song/status-badge";
-import { listSongs } from "@/lib/songs";
+import { advanceGeneration, listSongs, syncSongAssets } from "@/lib/songs";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Mes chansons", robots: { index: false } };
@@ -13,6 +14,20 @@ export default async function MesChansonsPage() {
   if (!user) redirect("/connexion?next=/mes-chansons");
 
   const songs = await listSongs();
+
+  // Réparation « je reviens plus tard » : fait avancer / re-synchronise en tâche
+  // de fond les chansons restées en plan (webhook + cron KO).
+  const stuck = songs.filter(
+    (s) => s.status === "generating" || (s.status === "ready" && !s.assets_synced_at),
+  );
+  if (stuck.length) {
+    after(async () => {
+      for (const s of stuck) {
+        if (s.status === "generating") await advanceGeneration(s.id).catch(() => {});
+        await syncSongAssets(s.id).catch(() => {});
+      }
+    });
+  }
   const active = songs.filter((s) => s.status !== "draft");
   const drafts = songs.filter((s) => s.status === "draft");
 

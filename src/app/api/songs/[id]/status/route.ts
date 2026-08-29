@@ -1,5 +1,9 @@
+import { after } from "next/server";
 import { apiError, json, requireUser } from "@/lib/api";
-import { advanceGeneration, getSongBundle } from "@/lib/songs";
+import { advanceGeneration, getSongBundle, syncSongAssets } from "@/lib/songs";
+import { logError } from "@/lib/errors";
+
+export const maxDuration = 60;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -8,7 +12,7 @@ export async function GET(_req: Request, { params }: Params) {
   if (response) return response;
   const { id } = await params;
 
-  const bundle = await getSongBundle(id);
+  let bundle = await getSongBundle(id);
   if (!bundle) return apiError("Chanson introuvable", 404);
 
   // Fait avancer la machine à états si nécessaire.
@@ -16,10 +20,14 @@ export async function GET(_req: Request, { params }: Params) {
     try {
       await advanceGeneration(id);
     } catch (err) {
-      console.error("advanceGeneration", err);
+      await logError("status.advanceGeneration", err, { songId: id });
     }
-    const refreshed = await getSongBundle(id);
-    if (refreshed) return json(refreshed);
+    bundle = (await getSongBundle(id)) ?? bundle;
+  }
+
+  // Ré-hébergement audio + timings en tâche de fond (ne bloque pas la réponse).
+  if (bundle.song.status === "ready" && !bundle.song.assets_synced_at) {
+    after(() => syncSongAssets(id));
   }
 
   return json(bundle);
