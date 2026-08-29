@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Check,
+  Clapperboard,
   Clock,
   Copy,
   Download,
@@ -97,6 +99,20 @@ export function SongDetail({ initial }: { initial: Bundle }) {
         <>
           <VersionPicker bundle={bundle} onChange={setBundle} />
           <ShareCard song={song} />
+          <Link
+            href={`/studio/${song.id}`}
+            className="flex items-center gap-3 rounded-3xl border border-line bg-white p-5 shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
+          >
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl gradient-brand text-white">
+              <Clapperboard className="size-5" />
+            </span>
+            <span className="flex-1">
+              <span className="block font-display font-bold">Créer le clip vidéo</span>
+              <span className="block text-sm text-ink-soft">
+                Paroles animées + photos + dédicace, à partager en 9:16 ou 1:1
+              </span>
+            </span>
+          </Link>
           {song.is_public && <ImpactCard song={song} reactions={bundle.reactions} />}
         </>
       )}

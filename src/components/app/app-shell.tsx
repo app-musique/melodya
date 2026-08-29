@@ -37,7 +37,7 @@ const NAV: NavItem[] = [
   { href: "/explorer", label: "Explorer", icon: Compass },
   { href: "/mes-chansons", label: "Mes chansons", icon: Music4 },
   { href: "/occasions", label: "Occasions", icon: CalendarHeart },
-  { href: "/studio", label: "Studio clip", icon: Clapperboard, soon: true },
+  { href: "/studio", label: "Studio clip", icon: Clapperboard },
   { href: "/profil", label: "Profil", icon: UserRound },
 ];
 

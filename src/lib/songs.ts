@@ -372,6 +372,7 @@ export async function getPublicGift(slug: string): Promise<{
   version: SongVersion | null;
   cover: string | null;
   reactions: GiftReaction[];
+  ownerReferralCode: string | null;
 } | null> {
   const admin = createAdminClient();
   const { data: song } = await admin
@@ -383,27 +384,36 @@ export async function getPublicGift(slug: string): Promise<{
   if (!song) return null;
 
   const s = song as Song;
-  const [{ data: version }, { data: cover }, { data: reactions }] = await Promise.all([
-    admin
-      .from("song_versions")
-      .select("*")
-      .eq("song_id", s.id)
-      .eq("is_selected", true)
-      .maybeSingle(),
-    admin.from("song_assets").select("url").eq("song_id", s.id).eq("type", "cover").maybeSingle(),
-    admin
-      .from("gift_reactions")
-      .select("*")
-      .eq("song_id", s.id)
-      .order("created_at", { ascending: false })
-      .limit(100),
-  ]);
+  const [{ data: version }, { data: cover }, { data: reactions }, { data: owner }] =
+    await Promise.all([
+      admin
+        .from("song_versions")
+        .select("*")
+        .eq("song_id", s.id)
+        .eq("is_selected", true)
+        .maybeSingle(),
+      admin
+        .from("song_assets")
+        .select("url")
+        .eq("song_id", s.id)
+        .eq("type", "cover")
+        .maybeSingle(),
+      admin
+        .from("gift_reactions")
+        .select("*")
+        .eq("song_id", s.id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      admin.from("profiles").select("referral_code").eq("id", s.user_id).maybeSingle(),
+    ]);
 
   return {
     song: s,
     version: (version as SongVersion) ?? null,
     cover: (cover as { url: string } | null)?.url ?? null,
     reactions: (reactions as GiftReaction[]) ?? [],
+    ownerReferralCode:
+      (owner as { referral_code: string | null } | null)?.referral_code ?? null,
   };
 }
 
