@@ -56,7 +56,7 @@ export default async function CreditsPage({ searchParams }: Props) {
           <li className="flex gap-2">
             <Check className="mt-0.5 size-4 shrink-0 text-brand-strong" />
             1 chanson = {creditsPerSong} crédit{creditsPerSong > 1 ? "s" : ""}, tout inclus (MP3,
-            pochette, 3 versions).
+            pochette, 2 versions).
           </li>
           <li className="flex gap-2">
             <Check className="mt-0.5 size-4 shrink-0 text-brand-strong" />

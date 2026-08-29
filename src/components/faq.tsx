@@ -18,11 +18,11 @@ const items = [
   },
   {
     q: "Combien de versions je reçois ?",
-    a: "Tu reçois 3 versions différentes de ta chanson. Tu écoutes, tu choisis ta préférée, et on te livre le fichier en haute qualité. Une régénération est offerte si aucune ne te convient.",
+    a: "Tu reçois 2 versions différentes de ta chanson. Tu écoutes, tu choisis ta préférée, et on te livre le fichier en haute qualité. Une régénération est offerte si aucune ne te convient.",
   },
   {
     q: "Comment et en combien de temps je reçois ma chanson ?",
-    a: "Ta chanson est prête sous 24h. Tu la retrouves dans ton espace personnel et tu reçois un email quand elle est disponible : MP3 haute qualité, pochette et 3 versions au choix, le tout téléchargeable.",
+    a: "Ta chanson est prête sous 24h. Tu la retrouves dans ton espace personnel et tu reçois un email quand elle est disponible : MP3 haute qualité, pochette et 2 versions au choix, le tout téléchargeable.",
   },
   {
     q: "Comment ça marche, les crédits ?",
