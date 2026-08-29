@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Compass, Headphones, Heart } from "lucide-react";
+import { Compass } from "lucide-react";
+import { ExploreGallery } from "@/components/explore/explore-gallery";
 import { listExplore } from "@/lib/explore";
 import { occasions } from "@/lib/site";
 import { MUSIC_STYLES } from "@/lib/domain";
@@ -58,41 +59,7 @@ export default async function ExplorerPage({ searchParams }: Props) {
           Rien ici pour ce filtre. Essaie une autre occasion ou un autre style.
         </div>
       ) : (
-        <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((it) => (
-            <li key={it.id}>
-              <Link
-                href={`/inspiration/${it.id}`}
-                className="group block overflow-hidden rounded-3xl border border-line bg-white shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
-              >
-                <div className="grid aspect-[4/3] w-full place-items-center bg-gradient-to-br from-plum to-brand-strong p-4 text-center">
-                  <span className="font-display text-lg font-extrabold text-white/90">
-                    {it.occasion ?? "Muzikii"}
-                  </span>
-                </div>
-                <div className="p-4">
-                  <p className="font-display text-base font-bold">{it.title}</p>
-                  <p className="mt-0.5 flex items-center gap-2 text-xs text-ink-soft">
-                    <span className="truncate">
-                      {it.artist ? `${it.artist} · ` : ""}
-                      {it.style ?? "—"}
-                    </span>
-                    <span className="ml-auto inline-flex shrink-0 items-center gap-1">
-                      <Headphones className="size-3.5" />
-                      {it.plays}
-                    </span>
-                    {it.reactions > 0 && (
-                      <span className="inline-flex shrink-0 items-center gap-1">
-                        <Heart className="size-3.5" />
-                        {it.reactions}
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ExploreGallery items={items} />
       )}
     </div>
   );
