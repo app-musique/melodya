@@ -1,7 +1,6 @@
-"use client";
-
-import { useState } from "react";
-import { Pause, Play } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { orderHref } from "@/lib/site";
 
 export type Example = {
   title: string;
@@ -12,13 +11,12 @@ export type Example = {
   to: string;
 };
 
-const BARS = Array.from({ length: 28 });
-
 export function ExampleCard({ ex }: { ex: Example }) {
-  const [playing, setPlaying] = useState(false);
-
   return (
-    <article className="group overflow-hidden rounded-3xl border border-line bg-white shadow-[var(--shadow-soft)]">
+    <Link
+      href={orderHref}
+      className="group block overflow-hidden rounded-3xl border border-line bg-white shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
+    >
       <div
         className="relative aspect-[4/3] p-5"
         style={{ backgroundImage: `linear-gradient(140deg, ${ex.from}, ${ex.to})` }}
@@ -33,29 +31,7 @@ export function ExampleCard({ ex }: { ex: Example }) {
             </span>
           ))}
         </div>
-
-        <button
-          type="button"
-          onClick={() => setPlaying((v) => !v)}
-          className="absolute bottom-5 left-5 grid size-12 place-items-center rounded-full bg-white text-ink shadow-lg transition-transform hover:scale-105"
-          aria-label={playing ? "Pause" : "Écouter l'extrait"}
-        >
-          {playing ? <Pause className="size-5" /> : <Play className="size-5 translate-x-0.5" />}
-        </button>
-
-        <div className="absolute bottom-6 right-5 flex h-10 items-end gap-[3px]">
-          {BARS.map((_, i) => (
-            <span
-              key={i}
-              className="w-[3px] rounded-full bg-white/80"
-              style={{
-                height: playing ? `${18 + Math.abs(Math.sin(i * 1.7)) * 78}%` : "22%",
-                transition: "height .35s ease",
-                animation: playing ? `floaty ${0.6 + (i % 5) * 0.12}s ease-in-out infinite` : "none",
-              }}
-            />
-          ))}
-        </div>
+        <ArrowUpRight className="absolute bottom-5 right-5 size-5 text-white/80 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
       </div>
 
       <div className="p-5">
@@ -64,6 +40,6 @@ export function ExampleCard({ ex }: { ex: Example }) {
           {ex.subtitle} · {ex.style}
         </p>
       </div>
-    </article>
+    </Link>
   );
 }

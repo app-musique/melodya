@@ -8,7 +8,6 @@ import {
   QrCode,
   ShieldCheck,
   Sparkles,
-  Star,
   Users,
   Wand2,
 } from "lucide-react";
@@ -43,7 +42,7 @@ const steps = [
   {
     icon: Sparkles,
     title: "Reçois ta chanson",
-    text: "Prête en 24h dans ton espace personnel : MP3, pochette et clip lyrics à télécharger. Express 6h dispo.",
+    text: "Prête en quelques minutes dans ton espace personnel : MP3, pochette et page cadeau à partager.",
   },
 ];
 
@@ -55,8 +54,8 @@ const valueProps = [
   },
   {
     icon: Mic,
-    title: "Voix et accent au choix",
-    text: "Homme, femme, enfant ou duo. Accent local ou neutre. Ambiance festive, douce ou émouvante.",
+    title: "Voix et ambiance au choix",
+    text: "Voix d'homme, de femme, d'enfant ou duo. Ambiance festive, douce ou émouvante, dans le style que tu veux.",
   },
   {
     icon: Sparkles,
@@ -65,18 +64,18 @@ const valueProps = [
   },
   {
     icon: ImageIcon,
-    title: "Pochette + clip lyrics offerts",
-    text: "Une pochette générée à ton nom et une vidéo paroles prête à partager sur les réseaux.",
+    title: "Pochette + paroles synchronisées",
+    text: "Une pochette générée à ton nom, et les paroles qui défilent avec la musique quand tu l'écoutes.",
   },
   {
     icon: QrCode,
-    title: "Page cadeau avec QR code",
-    text: "Une mini-page dédiée : dédicace, photos, compte à rebours. Partage le lien ou le QR le jour J.",
+    title: "Page cadeau à partager",
+    text: "Une page dédiée : dédicace, lecteur, paroles et réactions de tes proches. Un lien à envoyer le jour J.",
   },
   {
     icon: Users,
-    title: "Chanson collaborative",
-    text: "Plusieurs proches ajoutent leur message via un lien. On les réunit dans une seule chanson.",
+    title: "Studio clip vidéo",
+    text: "Transforme ta chanson en clip vertical : paroles animées, photos et dédicace, prêt pour les réseaux.",
   },
 ];
 
@@ -120,30 +119,9 @@ const included = [
   "2 versions au choix dans le style et la voix que tu veux",
   "Fichier MP3 haute qualité",
   "Pochette générée à ton nom",
-  "Page cadeau avec QR code à partager",
-  "Chanson prête en 24h dans ton espace personnel",
+  "Page cadeau à partager (lecteur, paroles, réactions)",
+  "Chanson prête en quelques minutes dans ton espace personnel",
   "1 régénération offerte si tu n'es pas satisfait",
-];
-
-const testimonials = [
-  {
-    quote:
-      "J'ai commandé pour l'entrée de mariage de ma sœur. Tout le monde a pleuré. Prête en une nuit.",
-    name: "Aminata D.",
-    role: "Mariage · Abidjan",
-  },
-  {
-    quote:
-      "Pour les 60 ans de mon père on a fait une chanson Rumba qui raconte sa vie. Le meilleur cadeau de la soirée.",
-    name: "Serge M.",
-    role: "Anniversaire · Kinshasa",
-  },
-  {
-    quote:
-      "Paiement Orange Money, texte modifié deux fois, voix d'enfant pour la fête des mères. Simple et vraiment émouvant.",
-    name: "Rita K.",
-    role: "Fête des mères · Lomé",
-  },
 ];
 
 export default async function Home() {
@@ -165,7 +143,7 @@ export default async function Home() {
             <div className="mx-auto max-w-3xl text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-1.5 text-xs font-semibold text-brand-strong">
                 <span className="size-1.5 rounded-full bg-brand-strong" />
-                N°1 de la chanson personnalisée par IA en Afrique
+                Paroles écrites par l&apos;IA · Paiement Mobile Money
               </span>
 
               <h1 className="mt-6 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
@@ -176,7 +154,7 @@ export default async function Home() {
 
               <p className="mx-auto mt-5 max-w-xl text-lg text-ink-soft">
                 Anniversaire, mariage, dot, hommage… Raconte ton histoire, notre IA écrit les
-                paroles et compose ta chanson sur-mesure. Prête à télécharger en 24h.
+                paroles et compose ta chanson sur-mesure. Prête à écouter en quelques minutes.
               </p>
 
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -194,18 +172,6 @@ export default async function Home() {
                   <Play className="size-4" />
                   Écouter des exemples
                 </a>
-              </div>
-
-              <div className="mt-8 flex flex-col items-center gap-2">
-                <div className="flex items-center gap-1 text-gold">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="size-4 fill-current" />
-                  ))}
-                </div>
-                <p className="text-sm text-ink-soft">
-                  <span className="font-semibold text-ink">185 512</span> chansons créées pour des
-                  moments qui comptent
-                </p>
               </div>
 
               <div className="mt-8">
@@ -310,10 +276,10 @@ export default async function Home() {
           <div className="mx-auto max-w-6xl px-5">
             <header className="max-w-2xl">
               <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Ils l&apos;ont créée avec Muzikii
+                Une chanson pour chaque occasion
               </h2>
               <p className="mt-3 text-ink-soft">
-                Des chansons pensées pour un seul moment, une seule personne.
+                Voici le genre de moments que Muzikii met en musique.
               </p>
             </header>
 
@@ -413,38 +379,6 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* TESTIMONIALS */}
-        <section className="section-pad">
-          <div className="mx-auto max-w-6xl px-5">
-            <header className="max-w-2xl">
-              <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Ils ont marqué l&apos;occasion
-              </h2>
-            </header>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {testimonials.map((t) => (
-                <figure
-                  key={t.name}
-                  className="flex flex-col rounded-3xl border border-line bg-white p-6 shadow-[var(--shadow-soft)]"
-                >
-                  <div className="flex gap-1 text-gold">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="size-4 fill-current" />
-                    ))}
-                  </div>
-                  <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-ink">
-                    “{t.quote}”
-                  </blockquote>
-                  <figcaption className="mt-5">
-                    <div className="font-semibold">{t.name}</div>
-                    <div className="text-xs text-brand-strong">{t.role}</div>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* CTA */}
         <section className="section-pad pt-0">
           <div className="mx-auto max-w-6xl px-5">
@@ -454,7 +388,8 @@ export default async function Home() {
                 Une personne, un moment, une chanson.
               </h2>
               <p className="mx-auto mt-3 max-w-xl text-white/85">
-                Commence maintenant, ta chanson est prête en 24h. Paiement Mobile Money ou carte.
+                Commence maintenant, ta chanson est prête en quelques minutes. Paiement Mobile
+                Money ou carte.
               </p>
               <a
                 href={orderHref}
@@ -503,10 +438,10 @@ export default async function Home() {
             ))}
           </nav>
           <div className="flex flex-col gap-2 text-sm">
-            <a href="#" className="text-ink-soft hover:text-ink">
+            <a href="/confidentialite" className="text-ink-soft hover:text-ink">
               Politique de confidentialité
             </a>
-            <a href="#" className="text-ink-soft hover:text-ink">
+            <a href="/cgu" className="text-ink-soft hover:text-ink">
               Conditions d&apos;utilisation
             </a>
             <a href="mailto:contact@muzikii.com" className="text-ink-soft hover:text-ink">
