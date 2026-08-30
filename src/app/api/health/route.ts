@@ -24,6 +24,7 @@ export async function GET() {
     sunoBalance: isMockMusic ? null : await getSunoCredits(),
     lyrics: isMockLyrics ? "template" : "claude",
     payments: isMockPayments ? "mock" : "moneroo",
+    monerooWebhookSecretSet: !!env.monerooWebhookSecret,
     email: isMockEmail ? "mock" : "brevo",
     cronSecretSet: !!env.cronSecret,
     googleClientIdSet: !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
