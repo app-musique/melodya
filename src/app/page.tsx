@@ -15,10 +15,11 @@ import {
 import { SiteHeader } from "@/components/site-header";
 import { HeroFloaties } from "@/components/hero-floaties";
 import { Faq } from "@/components/faq";
-import { ExampleCard, type Example } from "@/components/example-card";
+import { LandingExamples, type Example } from "@/components/landing-examples";
 import { Logo } from "@/components/logo";
 import { navLinks, occasions, orderHref, paymentMethods, site } from "@/lib/site";
 import { getCreditsPerSong, getPacks } from "@/lib/credits";
+import { getLandingExamples } from "@/lib/landing";
 import { formatXOF, pricePerSong } from "@/lib/pricing";
 import { isSupabaseConfigured } from "@/lib/env";
 
@@ -147,9 +148,17 @@ const included = [
 ];
 
 export default async function Home() {
-  const [packs, creditsPerSong] = isSupabaseConfigured
-    ? await Promise.all([getPacks(), getCreditsPerSong()])
-    : [[], 1];
+  const [packs, creditsPerSong, landing] = isSupabaseConfigured
+    ? await Promise.all([getPacks(), getCreditsPerSong(), getLandingExamples()])
+    : [[], 1, []];
+
+  // Rattache chaque vitrine épinglée (landing_order 1..4) à sa carte d'exemple.
+  const exampleCards: Example[] = examples.map((ex, i) => {
+    const song = landing.find((l) => l.order === i + 1);
+    return song
+      ? { ...ex, songId: song.songId, audioUrl: song.audioUrl, coverImage: song.coverImage }
+      : ex;
+  });
 
   return (
     <>
@@ -298,18 +307,14 @@ export default async function Home() {
           <div className="mx-auto max-w-6xl px-5">
             <header className="max-w-2xl">
               <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Une chanson pour chaque occasion
+                Écoute de vraies chansons Muzikii
               </h2>
               <p className="mt-3 text-ink-soft">
-                Voici le genre de moments que Muzikii met en musique.
+                Des chansons créées pour une occasion précise. Appuie sur lecture.
               </p>
             </header>
 
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {examples.map((ex) => (
-                <ExampleCard key={ex.title} ex={ex} />
-              ))}
-            </div>
+            <LandingExamples items={exampleCards} />
           </div>
         </section>
 
