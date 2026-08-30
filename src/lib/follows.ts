@@ -32,8 +32,8 @@ export type CreatorProfile = CreatorMini & {
   songs: CreatorPublicSong[];
 };
 
-function songTitle(s: Pick<Song, "showcase_title" | "occasion">): string {
-  return s.showcase_title || s.occasion || "Chanson";
+function songTitle(s: Pick<Song, "showcase_title" | "title" | "occasion">): string {
+  return s.showcase_title || s.title || s.occasion || "Chanson";
 }
 
 export async function creatorIdByHandle(handle: string): Promise<string | null> {
@@ -89,7 +89,7 @@ export async function getCreatorByHandle(handle: string): Promise<CreatorProfile
   // ou vitrines (une vitrine est déjà « rendue visible » par son créateur).
   const { data: rows } = await admin
     .from("songs")
-    .select("id, showcase_title, occasion, music_style, created_at, cover_url")
+    .select("id, title, showcase_title, occasion, music_style, created_at, cover_url")
     .eq("user_id", p.id)
     .eq("status", "ready")
     .or("shared_with_followers.eq.true,is_showcase.eq.true")
@@ -97,7 +97,10 @@ export async function getCreatorByHandle(handle: string): Promise<CreatorProfile
     .limit(60);
 
   const songs =
-    (rows as (Pick<Song, "id" | "showcase_title" | "occasion" | "music_style" | "created_at"> & {
+    (rows as (Pick<
+      Song,
+      "id" | "title" | "showcase_title" | "occasion" | "music_style" | "created_at"
+    > & {
       cover_url: string | null;
     })[]) ?? [];
   const totals = await reactionTotals(songs.map((s) => s.id));

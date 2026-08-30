@@ -66,7 +66,7 @@ export function SongDetail({ initial }: { initial: Bundle }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight">
-            {song.recipient_name || "Ta chanson"}
+            {song.title || song.recipient_name || "Ta chanson"}
           </h1>
           <p className="text-sm text-ink-soft">
             {song.occasion || "—"} · {song.music_style || "—"} · {song.mood || "—"}

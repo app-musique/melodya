@@ -15,8 +15,8 @@ const GRADIENTS = [
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
 
-  let recipient = "Une chanson";
-  let occasion = "Chanson personnalisée";
+  let heading = "Une chanson personnalisée";
+  let occasion = "Muzikii";
   let coverUrl: string | null = null;
 
   if (isSupabaseConfigured) {
@@ -24,13 +24,21 @@ export async function GET(_req: Request, { params }: Params) {
       const admin = createAdminClient();
       const { data } = await admin
         .from("songs")
-        .select("recipient_name, occasion, cover_url")
+        .select("title, recipient_name, occasion, cover_url")
         .eq("id", id)
         .maybeSingle();
       if (data) {
-        recipient = (data.recipient_name as string) || recipient;
-        occasion = (data.occasion as string) || occasion;
-        coverUrl = (data.cover_url as string | null) ?? null;
+        const d = data as {
+          title: string | null;
+          recipient_name: string | null;
+          occasion: string | null;
+          cover_url: string | null;
+        };
+        heading = d.recipient_name
+          ? `Pour ${d.recipient_name}`
+          : d.title || "Une chanson personnalisée";
+        occasion = d.occasion || "Muzikii";
+        coverUrl = d.cover_url;
       }
     } catch {
       // valeurs par défaut
@@ -73,8 +81,8 @@ export async function GET(_req: Request, { params }: Params) {
           <div style={{ display: "flex", fontSize: 34, opacity: 0.85, letterSpacing: 2 }}>
             {occasion.toUpperCase()}
           </div>
-          <div style={{ display: "flex", fontSize: 84, fontWeight: 800, marginTop: 8 }}>
-            {`Pour ${recipient}`}
+          <div style={{ display: "flex", fontSize: 76, fontWeight: 800, marginTop: 8 }}>
+            {heading}
           </div>
         </div>
         <div style={{ display: "flex", fontSize: 26, opacity: 0.8 }}>

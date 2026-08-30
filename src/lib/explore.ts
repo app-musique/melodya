@@ -37,7 +37,7 @@ export type ExploreDetail = ExploreItem & {
 };
 
 const SELECT =
-  "id,user_id,is_showcase,shared_with_followers,showcase_title,showcase_artist,sender_name,recipient_name,occasion,music_style,mood,voice,language,lyrics,lyrics_timing,plays_count,status,is_public,cover_url";
+  "id,user_id,is_showcase,shared_with_followers,title,showcase_title,showcase_artist,sender_name,recipient_name,occasion,music_style,mood,voice,language,lyrics,lyrics_timing,plays_count,status,is_public,cover_url";
 
 type ItemExtras = {
   reactions?: number;
@@ -53,7 +53,7 @@ function toItem(s: Record<string, unknown>, extras: ItemExtras = {}): ExploreIte
   // prénom réel du destinataire — titre neutre basé sur l'occasion.
   const fallbackTitle = song.is_showcase
     ? "Une chanson Muzikii"
-    : song.occasion || "Chanson";
+    : song.title || song.occasion || "Chanson";
   return {
     id: song.id,
     title: song.showcase_title || fallbackTitle,

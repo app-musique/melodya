@@ -8,15 +8,17 @@ const LYRICS_MODEL = process.env.LYRICS_MODEL?.trim() || "claude-sonnet-5";
 export type GeneratedLyrics = { title: string; lyrics: string };
 
 function brief(song: Song): string {
+  const val = (s: string | null | undefined) => (s && s.trim() ? s.trim() : "—");
   const lines = [
-    `Occasion : ${song.occasion ?? "—"}`,
-    `Pour : ${song.recipient_name ?? "—"} (${song.relationship ?? "proche"})`,
-    `De la part de : ${song.sender_name ?? "—"}`,
-    `Style musical : ${song.music_style ?? "—"}`,
-    `Voix : ${song.voice ?? "—"}`,
-    `Ambiance : ${song.mood ?? "—"}`,
+    `Titre souhaité : ${val(song.title)}`,
+    `Occasion : ${val(song.occasion)}`,
+    `Pour : ${val(song.recipient_name)}${song.relationship ? ` (${song.relationship})` : ""}`,
+    `De la part de : ${val(song.sender_name)}`,
+    `Style musical : ${val(song.music_style)}`,
+    `Voix : ${val(song.voice)}`,
+    `Ambiance : ${val(song.mood)}`,
     `Langue : ${song.language}`,
-    `Histoire : ${song.story ?? "—"}`,
+    `Histoire / message : ${val(song.story)}`,
   ];
   if (song.key_facts?.trim()) lines.push(`Détails à intégrer : ${song.key_facts}`);
   return lines.join("\n");
@@ -29,6 +31,8 @@ export function buildLyricsPrompt(song: Song, instructions?: string) {
     "Structure attendue : un titre, puis des sections balisées [Couplet 1], [Refrain], [Couplet 2], [Pont], [Refrain], [Outro].",
     "Le refrain revient à l'identique. Rimes naturelles, phrases courtes, vocabulaire concret.",
     "Intègre les prénoms et les détails fournis sans forcer. Respecte la langue et l'ambiance demandées.",
+    "Si aucun destinataire ni histoire n'est fourni : écris une chanson personnelle et universelle à partir du titre et de l'occasion (parle à la première personne si c'est pertinent). Ne mentionne aucun prénom inventé.",
+    "Si un titre est donné, garde-le tel quel dans la ligne TITRE.",
     "Réponds UNIQUEMENT au format :",
     "TITRE: <titre>",
     "<ligne vide>",
@@ -64,7 +68,7 @@ function mockLyrics(song: Song): GeneratedLyrics {
     ? facts.split(/[.,;\n]/).map((s) => s.trim()).filter(Boolean)[0]
     : null;
 
-  const title = `${to}, cette chanson est pour toi`;
+  const title = song.title?.trim() || `${to}, cette chanson est pour toi`;
   const lyrics = `[Couplet 1]
 ${to}, aujourd'hui c'est ${occ}
 Et j'avais tant de choses à te dire
@@ -124,5 +128,8 @@ export async function generateLyrics(
     .trim();
 
   if (!raw) return mockLyrics(song);
-  return parseLyrics(raw, `${song.recipient_name ?? "Une chanson"} — Muzikii`);
+  return parseLyrics(
+    raw,
+    song.title?.trim() || song.recipient_name?.trim() || song.occasion?.trim() || "Ma chanson",
+  );
 }

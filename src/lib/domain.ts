@@ -61,6 +61,7 @@ export type Song = {
   id: string;
   user_id: string;
   status: SongStatus;
+  title: string | null;
   occasion: string | null;
   recipient_name: string | null;
   sender_name: string | null;

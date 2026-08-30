@@ -14,9 +14,10 @@ import {
   type Song,
 } from "@/lib/domain";
 import { occasions } from "@/lib/site";
-import { stepLyrics, stepOccasion, stepStory, stepStyle } from "@/lib/schemas";
+import { stepDetails, stepLyrics, stepOccasion, stepStyle } from "@/lib/schemas";
 
 type FormState = {
+  title: string;
   occasion: string;
   recipient_name: string;
   sender_name: string;
@@ -31,8 +32,10 @@ type FormState = {
   lyrics_approved: boolean;
 };
 
-const STEPS = ["Occasion", "Histoire", "Style & voix", "Paroles", "Créer"];
+const STEPS = ["Occasion", "Détails", "Style & voix", "Paroles", "Créer"];
 
+// Modifier un de ces champs invalide des paroles déjà validées (le titre non :
+// c'est juste un libellé).
 const BRIEF_KEYS: (keyof FormState)[] = [
   "occasion",
   "recipient_name",
@@ -50,14 +53,11 @@ const BRIEF_KEYS: (keyof FormState)[] = [
 function resumeStep(s: Song): number {
   if (s.lyrics_approved) return 4;
   if ((s.lyrics ?? "").trim().length >= 40) return 3;
-  const briefDone =
-    !!s.recipient_name &&
-    !!s.sender_name &&
-    !!s.relationship &&
-    (s.story ?? "").trim().length >= 20;
   const styleDone = !!s.music_style && !!s.voice && !!s.mood;
-  if (briefDone && styleDone) return 3;
-  if (briefDone) return 2;
+  const detailsTouched =
+    !!s.title || !!s.recipient_name || (s.story ?? "").trim().length > 0;
+  if (styleDone) return 3;
+  if (detailsTouched) return 2;
   if (s.occasion) return 1;
   return 0;
 }
@@ -66,6 +66,7 @@ function resumeStep(s: Song): number {
  * (l'enum côté serveur rejette la chaîne vide). */
 function autosavePayload(f: FormState) {
   const p: Record<string, unknown> = {
+    title: f.title,
     occasion: f.occasion,
     recipient_name: f.recipient_name,
     sender_name: f.sender_name,
@@ -93,6 +94,7 @@ export function Wizard({
 }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({
+    title: song.title ?? "",
     occasion: song.occasion ?? "",
     recipient_name: song.recipient_name ?? "",
     sender_name: song.sender_name ?? "",
@@ -114,6 +116,7 @@ export function Wizard({
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   const [showResumeHint, setShowResumeHint] = useState(
     () =>
+      !!song.title ||
       !!song.recipient_name ||
       (song.story ?? "").length > 0 ||
       (song.lyrics ?? "").length > 0 ||
@@ -199,7 +202,8 @@ export function Wizard({
       return r.success ? null : r.error.issues[0].message;
     }
     if (step === 1) {
-      const r = stepStory.safeParse(form);
+      // Étape « Détails » : tout est facultatif, on vérifie juste les longueurs max.
+      const r = stepDetails.safeParse(form);
       return r.success ? null : r.error.issues[0].message;
     }
     if (step === 2) {
@@ -266,7 +270,12 @@ export function Wizard({
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? "Génération impossible");
-      setForm((f) => ({ ...f, lyrics: j.lyrics, lyrics_approved: false }));
+      setForm((f) => ({
+        ...f,
+        lyrics: j.lyrics,
+        lyrics_approved: false,
+        title: f.title || (typeof j.title === "string" ? j.title.slice(0, 100) : f.title),
+      }));
       if (regenerate) setRegenCount((c) => c + 1);
     } catch (e) {
       setError((e as Error).message);
@@ -342,27 +351,37 @@ export function Wizard({
         )}
 
         {step === 1 && (
-          <Section title="Raconte l'histoire" subtitle="Plus tu donnes de détails, plus la chanson sera juste.">
+          <Section
+            title="Les détails"
+            subtitle="Tout est facultatif. Une chanson peut être juste pour toi. Ce que tu remplis ici aide l'IA si tu lui demandes d'écrire les paroles."
+          >
+            <TextField
+              label="Titre de la chanson"
+              value={form.title}
+              onChange={(e) => set("title", e.target.value)}
+              placeholder="Ex. Reviens à la maison"
+              maxLength={100}
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               <TextField
-                label="Prénom du destinataire"
+                label="Prénom du destinataire (optionnel)"
                 value={form.recipient_name}
                 onChange={(e) => set("recipient_name", e.target.value)}
                 placeholder="Ex. Sarah"
               />
               <TextField
-                label="Ton prénom (expéditeur)"
+                label="Ton prénom (optionnel)"
                 value={form.sender_name}
                 onChange={(e) => set("sender_name", e.target.value)}
                 placeholder="Ex. Kevin"
               />
             </div>
             <SelectField
-              label="Qui est cette personne pour toi ?"
+              label="Ton lien avec cette personne (optionnel)"
               value={form.relationship}
               onChange={(e) => set("relationship", e.target.value)}
             >
-              <option value="">— Choisir —</option>
+              <option value="">— Aucun / sans objet —</option>
               {RELATIONSHIPS.map((r) => (
                 <option key={r} value={r}>
                   {r}
@@ -370,12 +389,12 @@ export function Wizard({
               ))}
             </SelectField>
             <TextArea
-              label="L'histoire, les souvenirs, ce que tu veux dire"
+              label="L'histoire, les souvenirs, ce que tu veux dire (optionnel)"
               rows={5}
               maxLength={4000}
               value={form.story}
               onChange={(e) => set("story", e.target.value)}
-              placeholder="Comment vous vous êtes rencontrés, une anecdote marquante, ce que cette personne représente…"
+              placeholder="Comment vous vous êtes rencontrés, une anecdote, ce que ce moment représente… ou ce que tu ressens si la chanson est pour toi."
             />
             <TextArea
               label="Détails précis à intégrer (optionnel)"
@@ -436,55 +455,78 @@ export function Wizard({
         {step === 3 && (
           <Section
             title="Les paroles"
-            subtitle="Générées par l'IA à partir de ton histoire, puis modifiables librement."
+            subtitle="Écris tes propres paroles — elles sont utilisées telles quelles. Ou laisse l'IA les écrire pour toi."
           >
-            {!form.lyrics ? (
-              <Button loading={genBusy} onClick={() => generateLyrics(false)}>
-                <Wand2 className="size-4" />
-                Générer les paroles
-              </Button>
-            ) : (
-              <>
-                <TextArea
-                  label="Paroles (modifiables)"
-                  rows={14}
-                  maxLength={6000}
-                  value={form.lyrics}
-                  onChange={(e) => set("lyrics", e.target.value)}
-                  className="font-mono text-[13px] leading-relaxed"
-                />
-                <Button
-                  variant="outline"
-                  loading={genBusy}
-                  onClick={() => generateLyrics(true)}
-                  disabled={regenCount >= MAX_REGENERATIONS}
-                >
-                  <Sparkles className="size-4" />
-                  Régénérer ({MAX_REGENERATIONS - regenCount} restantes)
-                </Button>
-                <label className="flex items-start gap-3 rounded-xl bg-cream-deep p-4 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.lyrics_approved}
-                    onChange={(e) => set("lyrics_approved", e.target.checked)}
-                    className="mt-0.5 size-4"
-                  />
-                  <span>
-                    Je valide ces paroles. Je pourrai encore demander une petite correction après
-                    livraison.
-                  </span>
-                </label>
-              </>
+            {!form.title && (
+              <TextField
+                label="Titre de la chanson"
+                value={form.title}
+                onChange={(e) => set("title", e.target.value)}
+                placeholder="Ex. Reviens à la maison"
+                maxLength={100}
+              />
             )}
+
+            <TextArea
+              label="Tes paroles"
+              rows={14}
+              maxLength={6000}
+              value={form.lyrics}
+              onChange={(e) => set("lyrics", e.target.value)}
+              className="font-mono text-[13px] leading-relaxed"
+              placeholder={
+                "Colle ou écris tes paroles ici.\nUtilise [Couplet 1], [Refrain]… pour marquer les sections (facultatif)."
+              }
+            />
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                variant="outline"
+                loading={genBusy}
+                onClick={() => generateLyrics(!!form.lyrics)}
+                disabled={regenCount >= MAX_REGENERATIONS && !!form.lyrics}
+              >
+                {form.lyrics ? <Sparkles className="size-4" /> : <Wand2 className="size-4" />}
+                {form.lyrics
+                  ? `Régénérer (${Math.max(MAX_REGENERATIONS - regenCount, 0)} restantes)`
+                  : "Pas d'inspiration ? Écris-les pour moi"}
+              </Button>
+              {form.lyrics && (
+                <span className="text-xs text-ink-soft">
+                  {form.lyrics.trim().split(/\s+/).length} mots
+                </span>
+              )}
+            </div>
+
+            <label className="flex items-start gap-3 rounded-xl bg-cream-deep p-4 text-sm">
+              <input
+                type="checkbox"
+                checked={form.lyrics_approved}
+                onChange={(e) => set("lyrics_approved", e.target.checked)}
+                className="mt-0.5 size-4"
+              />
+              <span>
+                Je valide ces paroles. Elles seront chantées telles quelles ; je pourrai demander
+                une petite correction après livraison.
+              </span>
+            </label>
           </Section>
         )}
 
         {step === 4 && (
           <Section title="Créer ta chanson" subtitle="Récapitulatif avant lancement.">
             <dl className="divide-y divide-line rounded-xl border border-line">
-              <Row label="Occasion" value={form.occasion} />
-              <Row label="Pour" value={`${form.recipient_name} (${form.relationship})`} />
-              <Row label="Style" value={`${form.music_style} · ${form.mood}`} />
+              <Row label="Titre" value={form.title || "—"} />
+              <Row label="Occasion" value={form.occasion || "—"} />
+              <Row
+                label="Pour"
+                value={
+                  form.recipient_name
+                    ? `${form.recipient_name}${form.relationship ? ` (${form.relationship})` : ""}`
+                    : "Moi / sans destinataire"
+                }
+              />
+              <Row label="Style" value={`${form.music_style || "—"} · ${form.mood || "—"}`} />
               <Row label="Voix" value={VOICES.find((v) => v.id === form.voice)?.label ?? "—"} />
             </dl>
 

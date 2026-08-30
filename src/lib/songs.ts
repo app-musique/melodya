@@ -317,9 +317,15 @@ export async function startGeneration(songId: string): Promise<void> {
     }
 
     const provider = getMusicProvider();
+    const title =
+      song.title?.trim() ||
+      (song.recipient_name?.trim()
+        ? `${song.recipient_name.trim()} — ${song.occasion ?? "chanson"}`
+        : song.occasion?.trim()) ||
+      "Ma chanson Muzikii";
     const { jobId } = await provider.createSong({
       songId,
-      title: `${song.recipient_name ?? "Muzikii"} — ${song.occasion ?? "chanson"}`,
+      title,
       lyrics,
       style: song.music_style ?? "Afrobeat",
       voice: song.voice ?? "femme",
@@ -464,16 +470,19 @@ export async function advanceGeneration(songId: string): Promise<Song> {
   }
   await admin.from("songs").update(shareUpdate).eq("id", songId);
 
-  const createdNotif = await notify((claimed as Song).user_id, {
+  const s = claimed as Song;
+  const songLabel = s.title || s.recipient_name || "Ta chanson";
+  const createdNotif = await notify(s.user_id, {
     type: "song_ready",
     title: "Ta chanson est prête 🎉",
-    body: `${(claimed as Song).recipient_name ?? "Ta chanson"} — écoute les versions et choisis ta préférée.`,
+    body: `${songLabel} — écoute les versions et choisis ta préférée.`,
     link: `/mes-chansons/${songId}`,
     dedupeKey: `song_ready:${songId}`,
   });
   if (createdNotif) {
-    await sendSongReadyEmail((claimed as Song).user_id, {
-      recipientName: (claimed as Song).recipient_name ?? "",
+    await sendSongReadyEmail(s.user_id, {
+      recipientName: s.recipient_name ?? "",
+      title: s.title ?? undefined,
       songId,
     }).catch(() => {});
   }
