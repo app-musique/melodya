@@ -298,6 +298,17 @@ export function AuthForm() {
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
         />
 
+        {mode === "login" && (
+          <div className="text-right">
+            <a
+              href="/connexion/mot-de-passe-oublie"
+              className="text-xs font-semibold text-brand-strong hover:underline"
+            >
+              Mot de passe oublié ?
+            </a>
+          </div>
+        )}
+
         {error && <p className="text-sm font-medium text-brand-strong">{error}</p>}
         {notice && <p className="text-sm font-medium text-ink-soft">{notice}</p>}
 
