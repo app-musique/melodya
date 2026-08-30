@@ -1,6 +1,6 @@
 import "server-only";
 import crypto from "node:crypto";
-import { env } from "@/lib/env";
+import { getFacebookConfig } from "@/lib/integrations";
 import { logError } from "@/lib/errors";
 
 const GRAPH_VERSION = "v21.0";
@@ -27,7 +27,8 @@ export type CapiEvent = {
  * les bloqueurs de pub). No-op si le pixel ou le jeton ne sont pas configurés.
  */
 export async function sendCapiEvent(evt: CapiEvent): Promise<void> {
-  if (!env.facebookPixelId || !env.facebookCapiToken) return;
+  const { pixelId, capiToken, testEventCode } = await getFacebookConfig();
+  if (!pixelId || !capiToken) return;
 
   const userData: Record<string, unknown> = {};
   if (evt.email) userData.em = [sha256(evt.email)];
@@ -48,13 +49,13 @@ export async function sendCapiEvent(evt: CapiEvent): Promise<void> {
         ...(evt.customData ? { custom_data: evt.customData } : {}),
       },
     ],
-    ...(env.facebookTestEventCode ? { test_event_code: env.facebookTestEventCode } : {}),
+    ...(testEventCode ? { test_event_code: testEventCode } : {}),
   };
 
   try {
     const res = await fetch(
-      `https://graph.facebook.com/${GRAPH_VERSION}/${env.facebookPixelId}/events?access_token=${encodeURIComponent(
-        env.facebookCapiToken,
+      `https://graph.facebook.com/${GRAPH_VERSION}/${pixelId}/events?access_token=${encodeURIComponent(
+        capiToken,
       )}`,
       {
         method: "POST",
