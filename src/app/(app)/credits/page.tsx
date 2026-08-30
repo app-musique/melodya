@@ -5,18 +5,34 @@ import { Check, Coins, Sparkles } from "lucide-react";
 import { PackPicker } from "@/components/credits/pack-picker";
 import { getBalance, getCreditsPerSong, getPacks } from "@/lib/credits";
 import { getUserLoyalty } from "@/lib/loyalty";
+import { settleMonerooPayment } from "@/lib/payments/moneroo";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { paymentMethods } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Crédits", robots: { index: false } };
 
-type Props = { searchParams: Promise<{ paid?: string; next?: string }> };
+type Props = {
+  searchParams: Promise<{ paid?: string; next?: string; paymentId?: string; paymentStatus?: string }>;
+};
 
 export default async function CreditsPage({ searchParams }: Props) {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion?next=/credits");
 
-  const { paid, next } = await searchParams;
+  const { paid, next, paymentId } = await searchParams;
+
+  // Retour de Moneroo : on confirme le paiement (source de vérité côté Moneroo),
+  // au cas où le webhook n'aurait pas encore été reçu.
+  let settleStatus: "success" | "pending" | "failed" | null = null;
+  if (paymentId && /^[A-Za-z0-9_-]{4,64}$/.test(paymentId)) {
+    try {
+      const r = await settleMonerooPayment(paymentId, { expectedUserId: user.id });
+      settleStatus = r.status;
+    } catch {
+      settleStatus = "pending";
+    }
+  }
+
   const [packs, creditsPerSong, balance, loyalty] = await Promise.all([
     getPacks(),
     getCreditsPerSong(),
@@ -36,15 +52,23 @@ export default async function CreditsPage({ searchParams }: Props) {
         Solde actuel : <span className="font-semibold text-ink">{balance} crédits</span>
       </p>
 
-      {paid === "1" && (
+      {paid === "1" && settleStatus !== "failed" && (
         <div className="mt-6 flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
           <Check className="size-4" />
-          Paiement pris en compte. Tes crédits sont à jour.
-          {safeNext && (
+          {settleStatus === "pending"
+            ? "Paiement en cours de confirmation. Tes crédits apparaîtront ici dans un instant — recharge la page."
+            : "Paiement confirmé. Tes crédits sont à jour."}
+          {safeNext && settleStatus !== "pending" && (
             <Link href={safeNext} className="ml-auto font-semibold underline">
               Continuer
             </Link>
           )}
+        </div>
+      )}
+
+      {settleStatus === "failed" && (
+        <div className="mt-6 rounded-2xl border border-brand-strong/30 bg-brand-strong/5 px-4 py-3 text-sm font-medium text-brand-strong">
+          Le paiement n&apos;a pas abouti. Aucun crédit n&apos;a été débité — tu peux réessayer.
         </div>
       )}
 

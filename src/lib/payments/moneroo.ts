@@ -1,6 +1,8 @@
 import "server-only";
 import crypto from "node:crypto";
 import { env, isMockPayments } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { grantCredits, paymentAlreadyCredited } from "@/lib/credits";
 
 const MONEROO_API = "https://api.moneroo.io/v1";
 
@@ -90,4 +92,109 @@ export function verifyWebhookSignature(rawBody: string, signature: string | null
 
 export function isSuccessfulPaymentStatus(status?: string): boolean {
   return !!status && ["success", "successful", "completed", "paid"].includes(status.toLowerCase());
+}
+
+type VerifyResult = {
+  status: string;
+  metadata: Record<string, unknown>;
+  method: string | null;
+  amount: number | null;
+  currency: string | null;
+};
+
+/**
+ * Source de vérité : interroge Moneroo pour l'état réel d'une transaction.
+ * (Le webhook Moneroo ne transmet PAS les metadata — on vérifie toujours ici.)
+ */
+export async function verifyPayment(transactionId: string): Promise<VerifyResult | null> {
+  if (isMockPayments || !env.monerooSecretKey) return null;
+  const res = await fetch(`${MONEROO_API}/payments/${encodeURIComponent(transactionId)}/verify`, {
+    headers: {
+      Authorization: `Bearer ${env.monerooSecretKey}`,
+      Accept: "application/json",
+    },
+  });
+  if (!res.ok) return null;
+  const json = (await res.json().catch(() => ({}))) as {
+    data?: {
+      status?: string;
+      metadata?: Record<string, unknown>;
+      amount?: number;
+      currency?: string;
+      capture?: { metadata?: { selected_payment_method?: string | null } };
+    };
+  };
+  const d = json.data;
+  if (!d) return null;
+  return {
+    status: d.status ?? "pending",
+    metadata: d.metadata ?? {},
+    method: d.capture?.metadata?.selected_payment_method ?? null,
+    amount: typeof d.amount === "number" ? d.amount : null,
+    currency: d.currency ?? null,
+  };
+}
+
+export type SettleResult = {
+  status: "success" | "pending" | "failed";
+  credited: boolean;
+  credits: number;
+};
+
+/**
+ * Règle une transaction Moneroo : vérifie l'état, met à jour la ligne `payments`,
+ * crédite le compte (idempotent). Appelé par le webhook ET au retour de paiement.
+ * `expectedUserId` : si fourni, ne crédite que si le paiement appartient à cet
+ * utilisateur (garde-fou pour la route de retour).
+ */
+export async function settleMonerooPayment(
+  transactionId: string,
+  opts: { expectedUserId?: string } = {},
+): Promise<SettleResult> {
+  const admin = createAdminClient();
+  const verified = await verifyPayment(transactionId);
+  if (!verified) return { status: "pending", credited: false, credits: 0 };
+
+  const success = isSuccessfulPaymentStatus(verified.status);
+  const failed = ["failed", "cancelled", "canceled", "declined"].includes(
+    verified.status.toLowerCase(),
+  );
+  const dbStatus = success ? "success" : failed ? "failed" : "initiated";
+
+  // Retrouve le paiement : via nos metadata si présentes, sinon via provider_ref.
+  const metaPaymentId =
+    typeof verified.metadata.payment_id === "string" ? verified.metadata.payment_id : null;
+
+  let q = admin.from("payments").select("id, user_id, credits, status");
+  q = metaPaymentId ? q.eq("id", metaPaymentId) : q.eq("provider_ref", transactionId);
+  const { data: payment } = await q.maybeSingle();
+  const p = payment as
+    | { id: string; user_id: string; credits: number | null; status: string }
+    | null;
+  if (!p) return { status: success ? "success" : failed ? "failed" : "pending", credited: false, credits: 0 };
+
+  if (p.status !== dbStatus) {
+    await admin
+      .from("payments")
+      .update({
+        status: dbStatus,
+        method: verified.method ?? undefined,
+        provider_ref: transactionId,
+        raw: verified as unknown as Record<string, unknown>,
+      })
+      .eq("id", p.id);
+  }
+
+  let credited = false;
+  const userOk = !opts.expectedUserId || opts.expectedUserId === p.user_id;
+  if (success && userOk && p.credits && p.credits > 0 && !(await paymentAlreadyCredited(p.id))) {
+    await grantCredits(p.user_id, p.credits, "purchase", p.id);
+    credited = true;
+  }
+
+  return {
+    status: success ? "success" : failed ? "failed" : "pending",
+    credited,
+    credits: p.credits ?? 0,
+  };
 }
