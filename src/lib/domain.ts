@@ -82,6 +82,7 @@ export type Song = {
   error: string | null;
   gift_slug: string | null;
   is_public: boolean;
+  in_explore: boolean;
   is_showcase: boolean;
   showcase_title: string | null;
   showcase_artist: string | null;

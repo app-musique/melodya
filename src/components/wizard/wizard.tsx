@@ -30,6 +30,7 @@ type FormState = {
   mood: string;
   lyrics: string;
   lyrics_approved: boolean;
+  in_explore: boolean;
 };
 
 const STEPS = ["Occasion", "Détails", "Style & voix", "Paroles", "Créer"];
@@ -78,6 +79,7 @@ function autosavePayload(f: FormState) {
     mood: f.mood,
     lyrics: f.lyrics,
     lyrics_approved: f.lyrics_approved,
+    in_explore: f.in_explore,
   };
   if (f.voice) p.voice = f.voice;
   return p;
@@ -107,6 +109,7 @@ export function Wizard({
     mood: song.mood ?? "",
     lyrics: song.lyrics ?? "",
     lyrics_approved: song.lyrics_approved,
+    in_explore: song.in_explore ?? true,
   });
   const [step, setStep] = useState(() => resumeStep(song));
   const [busy, setBusy] = useState(false);
@@ -529,6 +532,20 @@ export function Wizard({
               <Row label="Style" value={`${form.music_style || "—"} · ${form.mood || "—"}`} />
               <Row label="Voix" value={VOICES.find((v) => v.id === form.voice)?.label ?? "—"} />
             </dl>
+
+            <label className="flex items-start gap-3 rounded-xl border border-line p-4 text-sm">
+              <input
+                type="checkbox"
+                checked={form.in_explore}
+                onChange={(e) => set("in_explore", e.target.checked)}
+                className="mt-0.5 size-4"
+              />
+              <span>
+                Afficher ma chanson dans la section <strong>Inspiration</strong> (écoutable par
+                d&apos;autres, avec les paroles). Tu pourras la retirer à tout moment depuis « Mes
+                chansons ».
+              </span>
+            </label>
 
             <div className="flex items-center justify-between rounded-xl bg-cream-deep px-4 py-3 text-sm">
               <span className="flex items-center gap-2 font-semibold">

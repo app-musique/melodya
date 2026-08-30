@@ -3,7 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronUp, Pause, Play, Settings2 } from "lucide-react";
+import {
+  BellRing,
+  Check,
+  ChevronUp,
+  Clapperboard,
+  Compass,
+  Copy,
+  Download,
+  Link2,
+  Loader2,
+  Pause,
+  Play,
+  Settings2,
+} from "lucide-react";
 import { StatusBadge } from "@/components/song/status-badge";
 import { SyncedLyrics } from "@/components/explore/synced-lyrics";
 import type { SongListItem } from "@/lib/songs";
@@ -183,15 +196,141 @@ export function SongLibrary({ songs }: { songs: SongListItem[] }) {
                 )}
 
                 {!active && s.lyrics && (
-                  <p className={`mt-2 text-xs ${playable ? "text-ink-soft" : "text-ink-soft"}`}>
+                  <p className="mt-2 text-xs text-ink-soft">
                     {playable ? "Appuie pour écouter avec les paroles" : "Paroles disponibles"}
                   </p>
+                )}
+
+                {s.status === "ready" && (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <SongControls song={s} dark={active} />
+                  </div>
                 )}
               </div>
             </li>
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+function SongControls({ song, dark }: { song: SongListItem; dark: boolean }) {
+  const [inExplore, setInExplore] = useState(song.in_explore);
+  const [followers, setFollowers] = useState(song.shared_with_followers);
+  const [isPublic, setIsPublic] = useState(song.is_public);
+  const [slug, setSlug] = useState(song.gift_slug);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function patch(key: string, payload: Record<string, unknown>, apply: (j: unknown) => void) {
+    setBusy(key);
+    try {
+      const res = await fetch(`/api/songs/${song.id}/visibility`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (res.ok) apply(j);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const base = dark
+    ? "border-white/15 text-cream/80 hover:bg-white/10"
+    : "border-line text-ink-soft hover:bg-cream-deep";
+  const onCls = "border-brand bg-brand/10 text-brand-strong";
+  const pill = (on: boolean) =>
+    `inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+      on ? onCls : base
+    }`;
+
+  const shareUrl =
+    typeof window !== "undefined" && slug ? `${window.location.origin}/cadeau/${slug}` : "";
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line/60 pt-3">
+      <button
+        type="button"
+        onClick={() =>
+          patch("explore", { in_explore: !inExplore }, () => setInExplore((v) => !v))
+        }
+        disabled={busy !== null}
+        className={pill(inExplore)}
+        title="Apparaître dans la section Inspiration"
+      >
+        {busy === "explore" ? <Loader2 className="size-3.5 animate-spin" /> : <Compass className="size-3.5" />}
+        Inspiration
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          patch("followers", { shared_with_followers: !followers }, () => setFollowers((v) => !v))
+        }
+        disabled={busy !== null}
+        className={pill(followers)}
+        title="Prévenir mes abonnés et l'afficher sur mon profil"
+      >
+        {busy === "followers" ? <Loader2 className="size-3.5 animate-spin" /> : <BellRing className="size-3.5" />}
+        Abonnés
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          patch("public", { is_public: !isPublic }, (j) => {
+            const r = j as { is_public?: boolean; slug?: string | null };
+            setIsPublic(!!r.is_public);
+            if (r.slug) setSlug(r.slug);
+          })
+        }
+        disabled={busy !== null}
+        className={pill(isPublic)}
+        title="Lien de partage / page cadeau"
+      >
+        {busy === "public" ? <Loader2 className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
+        Lien de partage
+      </button>
+
+      {isPublic && shareUrl && (
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard?.writeText(shareUrl).catch(() => {});
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-semibold ${base}`}
+        >
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          {copied ? "Copié" : "Copier le lien"}
+        </button>
+      )}
+
+      <a
+        href={`/api/songs/${song.id}/download`}
+        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-semibold ${base}`}
+      >
+        <Download className="size-3.5" />
+        MP3
+      </a>
+      <Link
+        href={`/studio/${song.id}`}
+        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-semibold ${base}`}
+      >
+        <Clapperboard className="size-3.5" />
+        Clip
+      </Link>
+      <Link
+        href={`/mes-chansons/${song.id}`}
+        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-semibold ${base}`}
+      >
+        <Settings2 className="size-3.5" />
+        Gérer
+      </Link>
     </div>
   );
 }

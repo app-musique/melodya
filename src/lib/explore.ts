@@ -37,7 +37,7 @@ export type ExploreDetail = ExploreItem & {
 };
 
 const SELECT =
-  "id,user_id,is_showcase,shared_with_followers,title,showcase_title,showcase_artist,sender_name,recipient_name,occasion,music_style,mood,voice,language,lyrics,lyrics_timing,plays_count,status,is_public,cover_url";
+  "id,user_id,is_showcase,shared_with_followers,in_explore,title,showcase_title,showcase_artist,sender_name,recipient_name,occasion,music_style,mood,voice,language,lyrics,lyrics_timing,plays_count,status,is_public,cover_url";
 
 type ItemExtras = {
   reactions?: number;
@@ -79,15 +79,15 @@ export async function listExplore(filter?: {
   style?: string;
 }): Promise<ExploreItem[]> {
   const admin = createAdminClient();
-  // Galerie curée : uniquement les vitrines (is_showcase). Le partage de
-  // créations par la communauté sera une fonctionnalité dédiée (modération).
+  // Vitrines curées + toutes les chansons des utilisateurs qui n'ont pas retiré
+  // leur chanson de la section Inspiration (in_explore, par défaut vrai).
   let q = admin
     .from("songs")
     .select(SELECT)
-    .eq("is_showcase", true)
-    .order("plays_count", { ascending: false })
+    .or("is_showcase.eq.true,and(in_explore.eq.true,status.eq.ready)")
+    .order("is_showcase", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(60);
+    .limit(80);
 
   if (filter?.occasion) q = q.eq("occasion", filter.occasion);
   if (filter?.style) q = q.eq("music_style", filter.style);
@@ -146,8 +146,10 @@ export async function getExploreSong(id: string): Promise<ExploreDetail | null> 
   const { data } = await admin.from("songs").select(SELECT).eq("id", id).maybeSingle();
   if (!data) return null;
   const s = data as unknown as Song;
-  // Publiquement écoutable : vitrine curée OU chanson partagée avec les abonnés.
-  if (!s.is_showcase && !(s.shared_with_followers && s.status === "ready")) return null;
+  // Publiquement écoutable : vitrine curée, chanson dans « s'inspirer », ou
+  // chanson partagée avec les abonnés — et prête.
+  const ready = s.status === "ready";
+  if (!s.is_showcase && !((s.in_explore || s.shared_with_followers) && ready)) return null;
 
   const { data: version } = await admin
     .from("song_versions")
@@ -199,13 +201,17 @@ export async function getInspiration(id: string): Promise<{
   const admin = createAdminClient();
   const { data } = await admin
     .from("songs")
-    .select("music_style,mood,voice,language,is_showcase,shared_with_followers,is_public,status")
+    .select(
+      "music_style,mood,voice,language,is_showcase,shared_with_followers,in_explore,is_public,status",
+    )
     .eq("id", id)
     .maybeSingle();
   if (!data) return null;
   const s = data as unknown as Song;
   const ready = s.status === "ready";
-  if (!s.is_showcase && !((s.is_public || s.shared_with_followers) && ready)) return null;
+  if (!s.is_showcase && !((s.is_public || s.shared_with_followers || s.in_explore) && ready)) {
+    return null;
+  }
   return {
     music_style: s.music_style,
     mood: s.mood,

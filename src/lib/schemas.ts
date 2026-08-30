@@ -45,6 +45,7 @@ export const songDraftPatch = z
     mood: z.string().trim().max(60),
     lyrics: z.string().trim().max(6000),
     lyrics_approved: z.boolean(),
+    in_explore: z.boolean(),
   })
   .partial();
 
