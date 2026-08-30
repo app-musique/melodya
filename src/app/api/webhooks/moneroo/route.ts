@@ -1,12 +1,19 @@
+import { after } from "next/server";
 import { apiError, json } from "@/lib/api";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { grantCredits, paymentAlreadyCredited } from "@/lib/credits";
+import { logError } from "@/lib/errors";
 import {
-  isSuccessfulPaymentStatus,
+  settleMonerooPayment,
   verifyWebhookSignature,
   type MonerooWebhookEvent,
 } from "@/lib/payments/moneroo";
 
+export const maxDuration = 30;
+
+/**
+ * Webhook Moneroo — signé (HMAC-SHA256 hex, en-tête X-Moneroo-Signature).
+ * Le payload ne contient PAS les metadata : on répond 200 tout de suite et on
+ * vérifie l'état réel de la transaction en tâche de fond (settleMonerooPayment).
+ */
 export async function POST(req: Request) {
   const raw = await req.text();
   const signature =
@@ -23,32 +30,15 @@ export async function POST(req: Request) {
     return apiError("Payload invalide");
   }
 
-  const paymentId = event.data?.metadata?.payment_id as string | undefined;
-  const status = event.data?.status;
-  const ref = event.data?.id;
-
-  if (!paymentId) return json({ ignored: true });
-
-  const admin = createAdminClient();
-  const success = isSuccessfulPaymentStatus(status);
-
-  const { data: payment } = await admin
-    .from("payments")
-    .update({
-      status: success ? "success" : "failed",
-      method: (event.data as Record<string, unknown>)?.method as string | undefined,
-      raw: event as unknown as Record<string, unknown>,
-    })
-    .eq("id", paymentId)
-    .eq("provider_ref", ref ?? "")
-    .select("id, user_id, credits")
-    .maybeSingle();
-
-  if (success && payment) {
-    const p = payment as { id: string; user_id: string; credits: number | null };
-    if (p.credits && p.credits > 0 && !(await paymentAlreadyCredited(p.id))) {
-      await grantCredits(p.user_id, p.credits, "purchase", p.id);
-    }
+  const transactionId = event.data?.id;
+  if (transactionId) {
+    after(async () => {
+      try {
+        await settleMonerooPayment(transactionId);
+      } catch (e) {
+        await logError("webhook.moneroo", e, { transactionId, event: event.event });
+      }
+    });
   }
 
   return json({ received: true });
