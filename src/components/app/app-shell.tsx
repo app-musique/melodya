@@ -122,9 +122,10 @@ export function AppShell({
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center justify-between px-4">
         {collapsed && !mobile ? (
-          <span className="grid size-9 place-items-center rounded-xl gradient-brand text-white">
-            <Music4 className="size-4.5" />
-          </span>
+          <Link href="/tableau-de-bord" aria-label="Muzikii">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/muzikii-icon.png" alt="" width={36} height={36} className="size-9" />
+          </Link>
         ) : (
           <Link href="/tableau-de-bord">
             <Logo />
