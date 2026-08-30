@@ -82,7 +82,7 @@ export function NotificationsBell({ initialUnread }: { initialUnread: number }) 
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl border border-line bg-white shadow-[var(--shadow-soft)]">
+        <div className="fixed inset-x-3 top-[4.25rem] z-50 overflow-hidden rounded-2xl border border-line bg-white shadow-[var(--shadow-float)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 sm:shadow-[var(--shadow-soft)]">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <span className="text-sm font-semibold">Notifications</span>
             {unread > 0 && (
@@ -96,7 +96,7 @@ export function NotificationsBell({ initialUnread }: { initialUnread: number }) 
             )}
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[min(24rem,60vh)] overflow-y-auto">
             {loading && <p className="px-4 py-6 text-center text-sm text-ink-soft">Chargement…</p>}
             {!loading && items.length === 0 && (
               <p className="px-4 py-8 text-center text-sm text-ink-soft">Aucune notification.</p>
@@ -105,7 +105,7 @@ export function NotificationsBell({ initialUnread }: { initialUnread: number }) 
               <button
                 key={n.id}
                 onClick={() => openItem(n)}
-                className={`flex w-full flex-col gap-0.5 border-b border-line/60 px-4 py-3 text-left last:border-0 hover:bg-cream-deep ${
+                className={`flex w-full flex-col gap-0.5 border-b border-line/60 px-4 py-3 text-left break-words last:border-0 hover:bg-cream-deep ${
                   n.read_at ? "" : "bg-brand/5"
                 }`}
               >
