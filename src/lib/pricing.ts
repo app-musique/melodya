@@ -18,3 +18,14 @@ export function discountedPrice(price: number, pct: number): number {
   if (!pct || pct <= 0) return price;
   return Math.max(0, Math.round((price * (1 - pct / 100)) / 100) * 100);
 }
+
+/** Deux styles distincts (un par version) = 2 générations => coût doublé. */
+export function songCreditCost(
+  creditsPerSong: number,
+  styleA: string | null | undefined,
+  styleB: string | null | undefined,
+): number {
+  const a = (styleA ?? "").trim().toLowerCase();
+  const b = (styleB ?? "").trim().toLowerCase();
+  return creditsPerSong * (b && b !== a ? 2 : 1);
+}

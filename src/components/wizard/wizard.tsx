@@ -14,6 +14,7 @@ import {
   type Song,
 } from "@/lib/domain";
 import { occasions } from "@/lib/site";
+import { songCreditCost } from "@/lib/pricing";
 import { stepDetails, stepLyrics, stepOccasion, stepStyle } from "@/lib/schemas";
 
 type FormState = {
@@ -129,7 +130,8 @@ export function Wizard({
       resumeStep(song) >= 2,
   );
 
-  const enoughCredits = balance >= creditsPerSong;
+  const cost = songCreditCost(creditsPerSong, form.music_style, form.music_style_b);
+  const enoughCredits = balance >= cost;
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((f) => {
       const nextForm = { ...f, [k]: v };
@@ -446,7 +448,10 @@ export function Wizard({
                   <span className="font-semibold">La version 2 dans un autre style</span>
                   <span className="mt-0.5 block text-xs text-ink-soft">
                     Chaque création donne 2 versions. Coche pour que la 2ᵉ soit composée dans un
-                    genre différent — tu choisis ensuite ta préférée.
+                    genre différent — tu choisis ensuite ta préférée.{" "}
+                    <span className="font-medium text-ink">
+                      Deux compositions = {creditsPerSong * 2} crédits.
+                    </span>
                   </span>
                 </span>
               </label>
@@ -599,21 +604,24 @@ export function Wizard({
             <div className="flex items-center justify-between rounded-xl bg-cream-deep px-4 py-3 text-sm">
               <span className="flex items-center gap-2 font-semibold">
                 <Coins className="size-4 text-gold" />
-                Coût : {creditsPerSong} crédit{creditsPerSong > 1 ? "s" : ""}
+                Coût : {cost} crédit{cost > 1 ? "s" : ""}
+                {form.music_style_b && (
+                  <span className="font-normal text-ink-soft">(2 styles)</span>
+                )}
               </span>
               <span className="text-ink-soft">Solde : {balance}</span>
             </div>
 
             {enoughCredits ? (
               <Button loading={busy} onClick={createSong} className="w-full">
-                Créer ma chanson ({creditsPerSong} crédit{creditsPerSong > 1 ? "s" : ""})
+                Créer ma chanson ({cost} crédit{cost > 1 ? "s" : ""})
                 <ArrowRight className="size-4" />
               </Button>
             ) : (
               <>
                 <p className="text-sm text-ink-soft">
-                  Il te faut {creditsPerSong - balance} crédit
-                  {creditsPerSong - balance > 1 ? "s" : ""} de plus.
+                  Il te faut {cost - balance} crédit
+                  {cost - balance > 1 ? "s" : ""} de plus.
                 </p>
                 <Button
                   onClick={() => router.push("/credits?next=/commander")}

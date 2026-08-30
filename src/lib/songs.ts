@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getMusicProvider, type MusicTrack } from "@/lib/music";
 import { generateLyrics } from "@/lib/lyrics";
-import { CURRENCY } from "@/lib/pricing";
+import { CURRENCY, songCreditCost } from "@/lib/pricing";
 import { getCreditsPerSong, grantCredits, spendCreditForSong } from "@/lib/credits";
 import { notify } from "@/lib/notifications";
 import { sendSongReadyEmail } from "@/lib/email";
@@ -290,7 +290,7 @@ export async function createSongFromCredits(songId: string): Promise<CreateResul
   if (s.status !== "draft") return { ok: true }; // déjà lancée
   if (!s.lyrics_approved) return { ok: false, reason: "not_ready" };
 
-  const cost = await getCreditsPerSong();
+  const cost = songCreditCost(await getCreditsPerSong(), s.music_style, s.music_style_b);
   const admin = createAdminClient();
 
   // Réserve la chanson (atomique) avant de dépenser, pour éviter le double débit.
