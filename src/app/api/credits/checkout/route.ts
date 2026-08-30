@@ -4,7 +4,7 @@ import { getPack, grantCredits } from "@/lib/credits";
 import { getUserLoyalty } from "@/lib/loyalty";
 import { packCheckoutRequest } from "@/lib/schemas";
 import { initializePayment } from "@/lib/payments/moneroo";
-import { env } from "@/lib/env";
+import { env, isMockPayments } from "@/lib/env";
 import { CURRENCY, discountedPrice } from "@/lib/pricing";
 
 export async function POST(req: Request) {
@@ -41,6 +41,8 @@ export async function POST(req: Request) {
       amount,
       currency: pack.currency || CURRENCY,
       status: "initiated",
+      // Mode simulé (dev / E2E) : ne compte pas dans les statistiques admin.
+      is_test: isMockPayments,
     })
     .select("id")
     .single();

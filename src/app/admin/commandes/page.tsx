@@ -37,7 +37,7 @@ export default async function AdminCommandesPage() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link
-                    href={`/mes-chansons/${s.id}`}
+                    href={`/admin/chansons/${s.id}`}
                     className="text-xs font-semibold text-brand-strong"
                   >
                     Ouvrir
