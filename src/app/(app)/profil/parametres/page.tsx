@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, FileText, Globe, LifeBuoy, LogOut, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, Globe, KeyRound, LifeBuoy, LogOut, Shield, Trash2 } from "lucide-react";
 import { EmailPrefToggle } from "@/components/profile/email-pref-toggle";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/credits";
@@ -14,6 +14,7 @@ export default async function ParametresPage() {
   const profile = await getCurrentProfile();
 
   const rows = [
+    { icon: KeyRound, label: "Mot de passe", value: "Définir / changer", href: "/profil/securite" },
     { icon: Globe, label: "Langue", value: "Français", soon: true },
     { icon: Shield, label: "Confidentialité des créations", value: "Privé par défaut", soon: true },
     { icon: LifeBuoy, label: "Aide & support", value: "FAQ et contact", href: "/#faq" },
