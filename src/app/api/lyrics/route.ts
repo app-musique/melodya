@@ -25,8 +25,14 @@ export async function POST(req: Request) {
   if (song.status !== "draft") {
     return apiError("Cette commande n'est plus modifiable", 409);
   }
-  if (!song.story || song.story.trim().length < 20) {
-    return apiError("Raconte d'abord l'histoire (étape précédente).", 422);
+  // Il faut au moins UN élément sur lequel l'IA peut s'appuyer.
+  const hasContext =
+    !!song.title?.trim() ||
+    !!song.occasion?.trim() ||
+    (song.story ?? "").trim().length >= 10 ||
+    !!song.recipient_name?.trim();
+  if (!hasContext) {
+    return apiError("Donne au moins un titre ou une occasion pour que l'IA écrive les paroles.", 422);
   }
 
   if (parsed.data.regenerate && song.regen_count >= MAX_REGENERATIONS) {
@@ -42,6 +48,7 @@ export async function POST(req: Request) {
       lyrics,
       lyrics_approved: false,
     };
+    if (!song.title?.trim() && title) patch.title = title.slice(0, 100);
     if (parsed.data.regenerate) patch.regen_count = song.regen_count + 1;
 
     const updated = await updateDraft(song.id, patch);

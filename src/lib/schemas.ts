@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MOODS, MUSIC_STYLES, RELATIONSHIPS } from "@/lib/domain";
+import { MOODS, MUSIC_STYLES } from "@/lib/domain";
 
 const voiceIds = ["homme", "femme", "enfant", "duo"] as const;
 
@@ -7,11 +7,13 @@ export const stepOccasion = z.object({
   occasion: z.string().trim().min(2, "Choisis une occasion").max(60),
 });
 
-export const stepStory = z.object({
-  recipient_name: z.string().trim().min(1, "Indique le prénom du destinataire").max(80),
-  sender_name: z.string().trim().min(1, "Indique ton prénom (ou celui de l'expéditeur)").max(80),
-  relationship: z.enum(RELATIONSHIPS).or(z.string().trim().min(1).max(80)),
-  story: z.string().trim().min(20, "Raconte au moins quelques phrases").max(4000),
+// Étape « détails » : tout est facultatif — une chanson peut être juste pour soi.
+export const stepDetails = z.object({
+  title: z.string().trim().max(100).optional().default(""),
+  recipient_name: z.string().trim().max(80).optional().default(""),
+  sender_name: z.string().trim().max(80).optional().default(""),
+  relationship: z.string().trim().max(80).optional().default(""),
+  story: z.string().trim().max(4000).optional().default(""),
   key_facts: z.string().trim().max(2000).optional().default(""),
 });
 
@@ -30,6 +32,7 @@ export const stepLyrics = z.object({
 /** Patch partiel envoyé à PATCH /api/songs/[id] (autosave par étape). */
 export const songDraftPatch = z
   .object({
+    title: z.string().trim().max(100),
     occasion: z.string().trim().max(60),
     recipient_name: z.string().trim().max(80),
     sender_name: z.string().trim().max(80),

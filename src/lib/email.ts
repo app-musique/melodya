@@ -78,7 +78,7 @@ export async function sendWelcomeEmail(userId: string): Promise<void> {
 
 export async function sendSongReadyEmail(
   userId: string,
-  opts: { recipientName: string; songId: string },
+  opts: { recipientName: string; title?: string; songId: string },
 ): Promise<void> {
   const r = await recipient(userId);
   if (!r) return;

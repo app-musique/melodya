@@ -16,7 +16,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const gift = await getPublicGift(slug);
   if (!gift) return { title: "Cadeau introuvable" };
 
-  const title = `Une chanson pour ${gift.song.recipient_name ?? "toi"}`;
+  const title = gift.song.recipient_name
+    ? `Une chanson pour ${gift.song.recipient_name}`
+    : gift.song.title || "Une chanson personnalisée";
   return {
     title,
     description: `${gift.song.occasion ?? "Un moment spécial"} — une chanson personnalisée créée avec Muzikii.`,
@@ -54,7 +56,13 @@ export default async function GiftPage({ params }: Props) {
           {song.occasion ?? "Pour toi"}
         </p>
         <h1 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">
-          {song.recipient_name ?? "Cette chanson"},<br /> cette chanson est pour toi
+          {song.recipient_name ? (
+            <>
+              {song.recipient_name},<br /> cette chanson est pour toi
+            </>
+          ) : (
+            song.title || "Cette chanson"
+          )}
         </h1>
         {song.sender_name && (
           <p className="mt-4 text-cream/70">De la part de {song.sender_name}</p>

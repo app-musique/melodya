@@ -78,19 +78,25 @@ export function welcomeTpl(o: { name: string; siteUrl: string }): Mail {
 export function songReadyTpl(o: {
   name: string;
   recipientName: string;
+  title?: string;
   songId: string;
   siteUrl: string;
 }): Mail {
+  const label = o.recipientName
+    ? `pour ${o.recipientName}`
+    : o.title
+      ? `« ${o.title} »`
+      : "";
   return {
-    subject: `Ta chanson pour ${o.recipientName || "un proche"} est prête 🎉`,
+    subject: `Ta chanson ${label || ""} est prête 🎉`.replace(/\s+/g, " ").trim(),
     html: shell({
       preview: "Écoute les versions et choisis ta préférée.",
       heading: "Ta chanson est prête 🎉",
-      intro: `${hi(o.name)} la chanson pour <strong>${o.recipientName || "ton proche"}</strong> vient de sortir du studio. Écoute les versions, choisis ta préférée, puis active la page cadeau.`,
+      intro: `${hi(o.name)} ta chanson ${label} vient de sortir du studio. Écoute les versions, choisis ta préférée, puis partage-la.`,
       ctaLabel: "Écouter ma chanson",
       ctaHref: `${o.siteUrl}/mes-chansons/${o.songId}`,
     }),
-    text: `${hi(o.name)} ta chanson pour ${o.recipientName || "ton proche"} est prête : ${o.siteUrl}/mes-chansons/${o.songId}`,
+    text: `${hi(o.name)} ta chanson ${label} est prête : ${o.siteUrl}/mes-chansons/${o.songId}`,
   };
 }
 

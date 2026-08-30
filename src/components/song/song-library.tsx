@@ -106,7 +106,7 @@ export function SongLibrary({ songs }: { songs: SongListItem[] }) {
                       {s.occasion || "Chanson"}
                     </p>
                     <p className="font-display text-lg font-bold">
-                      {s.recipient_name || "Chanson"}
+                      {s.title || s.recipient_name || "Chanson"}
                     </p>
                     <p className={`truncate text-sm ${active ? "text-cream/60" : "text-ink-soft"}`}>
                       {s.music_style || "—"} · {s.mood || "—"}
