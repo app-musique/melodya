@@ -1,20 +1,20 @@
 export function Logo({ className = "" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 font-display font-extrabold text-xl tracking-tight ${className}`}>
-      <span className="grid size-8 place-items-center rounded-xl gradient-brand text-white shadow-[var(--shadow-float)]">
-        <svg viewBox="0 0 24 24" fill="none" className="size-4.5" aria-hidden>
-          <path
-            d="M9 18V6l10-2v12"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle cx="6" cy="18" r="3" fill="currentColor" />
-          <circle cx="16" cy="16" r="3" fill="currentColor" />
-        </svg>
+    <span
+      className={`inline-flex items-center gap-2 font-display text-xl font-extrabold tracking-tight ${className}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/muzikii-icon.png"
+        alt=""
+        width={32}
+        height={32}
+        className="size-8 shrink-0"
+        aria-hidden
+      />
+      <span>
+        Muzi<span className="text-gradient-brand">kii</span>
       </span>
-      Muzikii
     </span>
   );
 }
