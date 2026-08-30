@@ -32,8 +32,8 @@ export function AccountNav({ email }: { email: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-white shadow-[var(--shadow-soft)]">
-          <div className="border-b border-line px-4 py-3">
+        <div className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-line bg-white shadow-[var(--shadow-soft)]">
+          <div className="min-w-0 border-b border-line px-4 py-3">
             <p className="truncate text-xs text-ink-soft">Connecté en tant que</p>
             <p className="truncate text-sm font-semibold">{email}</p>
           </div>

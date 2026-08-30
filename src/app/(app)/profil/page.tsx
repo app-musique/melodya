@@ -62,7 +62,7 @@ export default async function ProfilPage() {
         <h1 className="mt-3 font-display text-xl font-extrabold">
           {profile?.full_name || "Mon compte"}
         </h1>
-        <p className="text-sm text-ink-soft">{user.email}</p>
+        <p className="max-w-full break-all text-sm text-ink-soft">{user.email}</p>
         {profile?.handle && (
           <Link
             href={`/createur/${profile.handle}`}

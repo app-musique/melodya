@@ -34,13 +34,13 @@ export default async function MesChansonsPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-8 sm:py-10">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
           Mes chansons
         </h1>
         <Link
           href="/commander"
-          className="inline-flex items-center gap-2 rounded-full gradient-brand px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-float)]"
+          className="inline-flex shrink-0 items-center justify-center gap-2 self-start whitespace-nowrap rounded-full gradient-brand px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-float)]"
         >
           <Plus className="size-4" />
           Nouvelle chanson
