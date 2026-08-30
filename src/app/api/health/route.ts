@@ -8,12 +8,14 @@ import {
   isSupabaseConfigured,
 } from "@/lib/env";
 import { getSunoCredits } from "@/lib/music/suno";
+import { getFacebookConfig } from "@/lib/integrations";
 
 /**
  * Diagnostic public (aucune valeur sensible) : dit quelles intégrations sont
  * réelles vs simulées. Pratique pour vérifier la config après un déploiement.
  */
 export async function GET() {
+  const fb = await getFacebookConfig();
   return json({
     ok: true,
     supabase: isSupabaseConfigured,
@@ -28,8 +30,9 @@ export async function GET() {
     email: isMockEmail ? "mock" : "brevo",
     cronSecretSet: !!env.cronSecret,
     googleClientIdSet: !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-    facebookPixelSet: !!env.facebookPixelId,
-    facebookCapiSet: !!env.facebookCapiToken,
+    facebookPixelSet: !!fb.pixelId,
+    facebookCapiSet: !!fb.capiToken,
+    facebookConfigSource: fb.source,
     siteUrl: env.siteUrl,
   });
 }

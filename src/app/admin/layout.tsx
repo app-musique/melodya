@@ -15,6 +15,7 @@ const TABS = [
   { href: "/admin/vitrines", label: "Vitrines" },
   { href: "/admin/commandes", label: "Commandes" },
   { href: "/admin/achats", label: "Achats" },
+  { href: "/admin/integrations", label: "Intégrations" },
   { href: "/admin/systeme", label: "Système" },
   { href: "/admin/admins", label: "Admins" },
 ];
