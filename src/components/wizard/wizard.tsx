@@ -25,6 +25,7 @@ type FormState = {
   story: string;
   key_facts: string;
   music_style: string;
+  music_style_b: string;
   voice: Song["voice"] | "";
   language: string;
   mood: string;
@@ -75,6 +76,7 @@ function autosavePayload(f: FormState) {
     story: f.story,
     key_facts: f.key_facts,
     music_style: f.music_style,
+    music_style_b: f.music_style_b,
     language: f.language,
     mood: f.mood,
     lyrics: f.lyrics,
@@ -104,6 +106,7 @@ export function Wizard({
     story: song.story ?? "",
     key_facts: song.key_facts ?? "",
     music_style: song.music_style ?? "",
+    music_style_b: song.music_style_b ?? "",
     voice: song.voice ?? "",
     language: song.language || "fr",
     mood: song.mood ?? "",
@@ -413,7 +416,9 @@ export function Wizard({
         {step === 2 && (
           <Section title="Le style de la chanson" subtitle="Genre, voix et ambiance.">
             <div>
-              <p className="mb-1.5 text-sm font-semibold">Style musical</p>
+              <p className="mb-1.5 text-sm font-semibold">
+                {form.music_style_b ? "Style de la version 1" : "Style musical"}
+              </p>
               <ChoiceGrid
                 options={MUSIC_STYLES}
                 value={form.music_style || null}
@@ -421,6 +426,43 @@ export function Wizard({
                 columns={3}
               />
             </div>
+
+            <div className="rounded-2xl border border-line bg-cream-deep/40 p-4">
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 shrink-0 accent-brand"
+                  checked={!!form.music_style_b}
+                  onChange={(e) =>
+                    set(
+                      "music_style_b",
+                      e.target.checked
+                        ? MUSIC_STYLES.find((s) => s !== form.music_style) ?? ""
+                        : "",
+                    )
+                  }
+                />
+                <span>
+                  <span className="font-semibold">La version 2 dans un autre style</span>
+                  <span className="mt-0.5 block text-xs text-ink-soft">
+                    Chaque création donne 2 versions. Coche pour que la 2ᵉ soit composée dans un
+                    genre différent — tu choisis ensuite ta préférée.
+                  </span>
+                </span>
+              </label>
+              {form.music_style_b && (
+                <div className="mt-3">
+                  <p className="mb-1.5 text-sm font-semibold">Style de la version 2</p>
+                  <ChoiceGrid
+                    options={MUSIC_STYLES.filter((s) => s !== form.music_style)}
+                    value={form.music_style_b || null}
+                    onChange={(v) => set("music_style_b", v)}
+                    columns={3}
+                  />
+                </div>
+              )}
+            </div>
+
             <div>
               <p className="mb-1.5 text-sm font-semibold">Voix</p>
               <ChoiceGrid
@@ -529,7 +571,14 @@ export function Wizard({
                     : "Moi / sans destinataire"
                 }
               />
-              <Row label="Style" value={`${form.music_style || "—"} · ${form.mood || "—"}`} />
+              <Row
+                label="Style"
+                value={
+                  form.music_style_b
+                    ? `V1 ${form.music_style || "—"} · V2 ${form.music_style_b} · ${form.mood || "—"}`
+                    : `${form.music_style || "—"} · ${form.mood || "—"}`
+                }
+              />
               <Row label="Voix" value={VOICES.find((v) => v.id === form.voice)?.label ?? "—"} />
             </dl>
 

@@ -185,7 +185,7 @@ export function SongLibrary({ songs }: { songs: SongListItem[] }) {
                         <p className="mb-1 text-xs font-semibold text-gold">Paroles</p>
                         <SyncedLyrics
                           lyrics={s.lyrics}
-                          timing={s.lyrics_timing}
+                          timing={s.version_timing ?? s.lyrics_timing}
                           currentTime={time}
                           duration={duration}
                           heightClass="h-[260px]"
