@@ -487,15 +487,8 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     }).catch(() => {});
   }
 
-  // Récompense de parrainage (idempotente) — une chanson réellement livrée.
-  try {
-    const { error } = await admin.rpc("grant_referral_reward", {
-      p_referee: (claimed as Song).user_id,
-    });
-    if (error) await logError("grant_referral_reward", error, { songId });
-  } catch (e) {
-    await logError("grant_referral_reward", e, { songId });
-  }
+  // La récompense de parrainage est accordée au 1er ACHAT de crédits du filleul
+  // (déclenchée par grant_credits, cf. migration 0013) — pas ici.
 
   return claimed as Song;
 }

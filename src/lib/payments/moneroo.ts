@@ -13,6 +13,9 @@ export type InitPaymentInput = {
   description: string;
   returnUrl: string;
   customer: { email: string; firstName?: string; lastName?: string };
+  /** Pays de l'acheteur (ISO 3166-1 alpha-2) — pré-sélectionne le pays sur la
+   *  page de paiement Moneroo. L'acheteur peut toujours en changer. */
+  country?: string;
 };
 
 export type InitPaymentResult = {
@@ -46,6 +49,9 @@ export async function initializePayment(input: InitPaymentInput): Promise<InitPa
         email: input.customer.email,
         first_name: input.customer.firstName || "Client",
         last_name: input.customer.lastName || "Muzikii",
+        ...(input.country && /^[A-Z]{2}$/.test(input.country)
+          ? { country: input.country }
+          : {}),
       },
       return_url: input.returnUrl,
       metadata: { payment_id: input.paymentId },

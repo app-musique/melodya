@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, Loader2, Plus, Trash2 } from "lucide-react";
 import type { LoyaltyTier } from "@/lib/domain";
 
-type Referral = { referral_referee_bonus: number; referral_referrer_reward: number };
+type Referral = { referral_referrer_reward: number };
 
 export function LoyaltyEditor({
   initialTiers,
@@ -126,24 +126,10 @@ export function LoyaltyEditor({
       <section className="rounded-2xl border border-line bg-white p-5">
         <h2 className="font-display text-lg font-bold">Parrainage</h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Le filleul reçoit son bonus à l&apos;inscription via le lien. Le parrain est crédité
-          quand le filleul crée sa première chanson.
+          Le filleul ne reçoit aucun crédit à l&apos;inscription. Le parrain est crédité
+          quand son filleul effectue son premier achat de crédits.
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-4">
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-ink-soft">
-              Bonus filleul (crédits)
-            </span>
-            <input
-              type="number"
-              min={0}
-              value={referral.referral_referee_bonus}
-              onChange={(e) =>
-                setReferral((r) => ({ ...r, referral_referee_bonus: Number(e.target.value) }))
-              }
-              className="w-28 rounded-lg border border-line px-3 py-2 text-sm"
-            />
-          </label>
           <label className="block">
             <span className="mb-1 block text-xs font-semibold text-ink-soft">
               Récompense parrain (crédits)

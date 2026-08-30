@@ -84,7 +84,6 @@ export const adminPackSchema = z.object({
 export const adminSettingsSchema = z.object({
   credits_per_song: z.number().int().min(1).max(50),
   signup_bonus_credits: z.number().int().min(0).max(100),
-  referral_referee_bonus: z.number().int().min(0).max(50),
   referral_referrer_reward: z.number().int().min(0).max(50),
 });
 
