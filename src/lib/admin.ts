@@ -1,7 +1,8 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSunoCredits } from "@/lib/music/suno";
-import { isMockEmail, isMockLyrics, isMockMusic, isMockPayments } from "@/lib/env";
+import { grantCredits } from "@/lib/credits";
+import { env, isMockEmail, isMockLyrics, isMockMusic, isMockPayments } from "@/lib/env";
 import type { AppError, Song, SongVersion } from "@/lib/domain";
 
 const DAY = 86_400_000;
@@ -266,4 +267,92 @@ export async function listAllSongs(limit = 100): Promise<AdminSongRow[]> {
       };
     }),
   );
+}
+
+// ------------------------------------------------------------------
+// Crédits offerts depuis l'admin
+// ------------------------------------------------------------------
+
+/** Retrouve un utilisateur par email exact (via l'API admin GoTrue). */
+async function findUserByEmail(email: string): Promise<{ id: string; email: string } | null> {
+  const clean = email.trim().toLowerCase();
+  if (!clean || !env.supabaseUrl || !env.supabaseServiceRoleKey) return null;
+  const res = await fetch(
+    `${env.supabaseUrl}/auth/v1/admin/users?filter=${encodeURIComponent(clean)}`,
+    {
+      headers: {
+        apikey: env.supabaseServiceRoleKey,
+        Authorization: `Bearer ${env.supabaseServiceRoleKey}`,
+      },
+    },
+  );
+  if (!res.ok) return null;
+  const json = (await res.json().catch(() => ({}))) as {
+    users?: { id: string; email?: string | null }[];
+  };
+  const u = (json.users ?? []).find((x) => (x.email ?? "").toLowerCase() === clean);
+  return u ? { id: u.id, email: u.email ?? clean } : null;
+}
+
+export type GrantResult =
+  | { ok: true; email: string; amount: number; balance: number }
+  | { ok: false; error: string };
+
+/** Crédite (ou débite si négatif) le compte d'un utilisateur. */
+export async function grantCreditsByEmail(email: string, amount: number): Promise<GrantResult> {
+  if (!Number.isInteger(amount) || amount === 0 || Math.abs(amount) > 1000) {
+    return { ok: false, error: "Montant invalide (entier non nul, max 1000)." };
+  }
+  const user = await findUserByEmail(email);
+  if (!user) return { ok: false, error: "Aucun compte pour cet email." };
+
+  try {
+    const balance = await grantCredits(user.id, amount, "adjustment");
+    return { ok: true, email: user.email, amount, balance };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+export type CreditGrantRow = {
+  id: string;
+  created_at: string;
+  email: string | null;
+  amount: number;
+  balance_after: number;
+};
+
+/** Derniers ajustements manuels (reason = adjustment). */
+export async function listCreditGrants(limit = 30): Promise<CreditGrantRow[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("credit_transactions")
+    .select("id, user_id, amount, balance_after, created_at")
+    .eq("reason", "adjustment")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  const rows = (data as {
+    id: string;
+    user_id: string;
+    amount: number;
+    balance_after: number;
+    created_at: string;
+  }[]) ?? [];
+
+  const emailById = new Map<string, string | null>();
+  await Promise.all(
+    [...new Set(rows.map((r) => r.user_id))].map(async (uid) => {
+      const { data: u } = await admin.auth.admin.getUserById(uid);
+      emailById.set(uid, u.user?.email ?? null);
+    }),
+  );
+
+  return rows.map((r) => ({
+    id: r.id,
+    created_at: r.created_at,
+    email: emailById.get(r.user_id) ?? null,
+    amount: r.amount,
+    balance_after: r.balance_after,
+  }));
 }
