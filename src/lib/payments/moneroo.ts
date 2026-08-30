@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { env, isMockPayments } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { grantCredits, paymentAlreadyCredited } from "@/lib/credits";
+import { sendCapiEvent } from "@/lib/facebook";
 
 const MONEROO_API = "https://api.moneroo.io/v1";
 
@@ -145,6 +146,9 @@ export type SettleResult = {
   status: "success" | "pending" | "failed";
   credited: boolean;
   credits: number;
+  amount: number | null;
+  currency: string | null;
+  paymentId: string | null;
 };
 
 /**
@@ -158,8 +162,9 @@ export async function settleMonerooPayment(
   opts: { expectedUserId?: string } = {},
 ): Promise<SettleResult> {
   const admin = createAdminClient();
+  const empty = { credited: false, credits: 0, amount: null, currency: null, paymentId: null };
   const verified = await verifyPayment(transactionId);
-  if (!verified) return { status: "pending", credited: false, credits: 0 };
+  if (!verified) return { status: "pending", ...empty };
 
   const success = isSuccessfulPaymentStatus(verified.status);
   const failed = ["failed", "cancelled", "canceled", "declined"].includes(
@@ -171,13 +176,21 @@ export async function settleMonerooPayment(
   const metaPaymentId =
     typeof verified.metadata.payment_id === "string" ? verified.metadata.payment_id : null;
 
-  let q = admin.from("payments").select("id, user_id, credits, status");
+  let q = admin.from("payments").select("id, user_id, credits, status, amount, currency, is_test");
   q = metaPaymentId ? q.eq("id", metaPaymentId) : q.eq("provider_ref", transactionId);
   const { data: payment } = await q.maybeSingle();
   const p = payment as
-    | { id: string; user_id: string; credits: number | null; status: string }
+    | {
+        id: string;
+        user_id: string;
+        credits: number | null;
+        status: string;
+        amount: number | null;
+        currency: string | null;
+        is_test: boolean | null;
+      }
     | null;
-  if (!p) return { status: success ? "success" : failed ? "failed" : "pending", credited: false, credits: 0 };
+  if (!p) return { status: success ? "success" : failed ? "failed" : "pending", ...empty };
 
   if (p.status !== dbStatus) {
     await admin
@@ -196,11 +209,31 @@ export async function settleMonerooPayment(
   if (success && userOk && p.credits && p.credits > 0 && !(await paymentAlreadyCredited(p.id))) {
     await grantCredits(p.user_id, p.credits, "purchase", p.id);
     credited = true;
+
+    // Conversion Meta (API Conversions) — dédupliquée avec le pixel via event_id.
+    if (!p.is_test) {
+      const { data: u } = await admin.auth.admin.getUserById(p.user_id);
+      await sendCapiEvent({
+        eventName: "Purchase",
+        eventId: p.id,
+        eventSourceUrl: `${env.siteUrl}/credits`,
+        email: u.user?.email ?? null,
+        customData: {
+          value: p.amount ?? verified.amount ?? 0,
+          currency: p.currency ?? verified.currency ?? "XOF",
+          content_type: "product",
+          num_items: p.credits,
+        },
+      });
+    }
   }
 
   return {
     status: success ? "success" : failed ? "failed" : "pending",
     credited,
     credits: p.credits ?? 0,
+    amount: p.amount ?? verified.amount ?? null,
+    currency: p.currency ?? verified.currency ?? null,
+    paymentId: p.id,
   };
 }

@@ -28,6 +28,8 @@ export async function GET() {
     email: isMockEmail ? "mock" : "brevo",
     cronSecretSet: !!env.cronSecret,
     googleClientIdSet: !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    facebookPixelSet: !!env.facebookPixelId,
+    facebookCapiSet: !!env.facebookCapiToken,
     siteUrl: env.siteUrl,
   });
 }

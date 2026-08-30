@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { fbqTrack } from "@/components/analytics/facebook-pixel";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup";
@@ -205,6 +206,7 @@ export function AuthForm() {
         setLoading(false);
         return;
       }
+      fbqTrack("CompleteRegistration", { method: "email" });
       if (!data.session) {
         setNotice("Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.");
         setLoading(false);

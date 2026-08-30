@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Check, Coins, Sparkles } from "lucide-react";
 import { PackPicker } from "@/components/credits/pack-picker";
+import { PurchaseTracker } from "@/components/analytics/event-trackers";
 import { getBalance, getCreditsPerSong, getPacks } from "@/lib/credits";
 import { getUserLoyalty } from "@/lib/loyalty";
 import { settleMonerooPayment } from "@/lib/payments/moneroo";
@@ -24,10 +25,20 @@ export default async function CreditsPage({ searchParams }: Props) {
   // Retour de Moneroo : on confirme le paiement (source de vérité côté Moneroo),
   // au cas où le webhook n'aurait pas encore été reçu.
   let settleStatus: "success" | "pending" | "failed" | null = null;
+  let purchase: { eventId: string; value: number; currency: string; numItems: number } | null =
+    null;
   if (paymentId && /^[A-Za-z0-9_-]{4,64}$/.test(paymentId)) {
     try {
       const r = await settleMonerooPayment(paymentId, { expectedUserId: user.id });
       settleStatus = r.status;
+      if (r.status === "success" && r.paymentId) {
+        purchase = {
+          eventId: r.paymentId,
+          value: r.amount ?? 0,
+          currency: r.currency ?? "XOF",
+          numItems: r.credits,
+        };
+      }
     } catch {
       settleStatus = "pending";
     }
@@ -44,6 +55,14 @@ export default async function CreditsPage({ searchParams }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:py-10">
+      {purchase && (
+        <PurchaseTracker
+          eventId={purchase.eventId}
+          value={purchase.value}
+          currency={purchase.currency}
+          numItems={purchase.numItems}
+        />
+      )}
       <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
         Acheter des crédits
       </h1>

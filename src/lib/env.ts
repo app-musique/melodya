@@ -32,6 +32,10 @@ export const env = {
   monerooSecretKey: clean(process.env.MONEROO_SECRET_KEY),
   monerooWebhookSecret: clean(process.env.MONEROO_WEBHOOK_SECRET),
 
+  facebookPixelId: clean(process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID),
+  facebookCapiToken: clean(process.env.FACEBOOK_CONVERSION_API_TOKEN),
+  facebookTestEventCode: clean(process.env.FACEBOOK_TEST_EVENT_CODE),
+
   brevoApiKey: clean(process.env.BREVO_API_KEY),
   emailFrom: clean(process.env.EMAIL_FROM) ?? "Muzikii <muzikii2026@gmail.com>",
   emailReplyTo: clean(process.env.EMAIL_REPLY_TO),
