@@ -7,6 +7,7 @@ import {
   Check,
   Clapperboard,
   Clock,
+  Compass,
   Copy,
   Download,
   ExternalLink,
@@ -110,6 +111,7 @@ export function SongDetail({ initial }: { initial: Bundle }) {
           <VersionPicker bundle={bundle} onChange={setBundle} />
           <CoverCard bundle={bundle} onChange={setBundle} />
           <ShareCard song={song} />
+          <InspireCard song={song} />
           <SubscribersCard song={song} />
           <Link
             href={`/studio/${song.id}`}
@@ -518,6 +520,45 @@ function CoverCard({ bundle, onChange }: { bundle: Bundle; onChange: (b: Bundle)
       </div>
 
       {error && <p className="mt-2 text-sm font-medium text-brand-strong">{error}</p>}
+    </Card>
+  );
+}
+
+function InspireCard({ song }: { song: Song }) {
+  const [on, setOn] = useState(song.in_explore);
+  const [busy, setBusy] = useState(false);
+
+  async function toggle(value: boolean) {
+    setBusy(true);
+    const res = await fetch(`/api/songs/${song.id}/visibility`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ in_explore: value }),
+    });
+    if (res.ok) setOn(value);
+    setBusy(false);
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2">
+        <Compass className="size-4 text-brand-strong" />
+        <h2 className="font-display text-lg font-bold">Section Inspiration</h2>
+      </div>
+      <p className="mt-1 text-sm text-ink-soft">
+        Ta chanson apparaît dans « s&apos;inspirer » — d&apos;autres peuvent l&apos;écouter avec
+        les paroles. Décoche pour la retirer.
+      </p>
+      <label className="mt-4 flex items-center gap-3 text-sm font-medium">
+        <input
+          type="checkbox"
+          checked={on}
+          disabled={busy}
+          onChange={(e) => toggle(e.target.checked)}
+          className="size-4"
+        />
+        {on ? "Visible dans Inspiration" : "Retirée de Inspiration"}
+      </label>
     </Card>
   );
 }
