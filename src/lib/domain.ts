@@ -70,6 +70,8 @@ export type Song = {
   key_facts: string | null;
   language: string;
   music_style: string | null;
+  /** Style de la 2e version, si l'utilisateur en veut un différent (sinon null). */
+  music_style_b: string | null;
   voice: VoiceType | null;
   mood: string | null;
   lyrics: string | null;
@@ -111,9 +113,30 @@ export type SongVersion = {
   duration_sec: number | null;
   is_selected: boolean;
   provider_audio_id: string | null;
+  provider_job_id: string | null;
   persisted_at: string | null;
   image_url: string | null;
+  /** Style de cette version (peut différer de l'autre version). */
+  music_style: string | null;
+  /** Timings propres à cette version (arrangement différent d'une version à l'autre). */
+  lyrics_timing: LyricsTiming | null;
   created_at: string;
+};
+
+export type SongJob = {
+  id: string;
+  song_id: string;
+  slot: number;
+  provider: string;
+  provider_job_id: string | null;
+  style: string;
+  status: "pending" | "ready" | "failed";
+  audio_url: string | null;
+  duration_sec: number | null;
+  provider_audio_id: string | null;
+  image_url: string | null;
+  created_at: string;
+  completed_at: string | null;
 };
 
 export type SongAsset = {

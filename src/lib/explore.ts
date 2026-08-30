@@ -45,6 +45,8 @@ type ItemExtras = {
   creatorName?: string | null;
   creatorHandle?: string | null;
   audioUrl?: string | null;
+  /** Timing de la version écoutée (peut différer de song.lyrics_timing). */
+  timing?: LyricsTiming | null;
 };
 
 function toItem(s: Record<string, unknown>, extras: ItemExtras = {}): ExploreItem {
@@ -70,7 +72,7 @@ function toItem(s: Record<string, unknown>, extras: ItemExtras = {}): ExploreIte
     creatorHandle: extras.creatorHandle ?? null,
     audioUrl: extras.audioUrl ?? null,
     lyrics: song.lyrics,
-    timing: song.lyrics_timing,
+    timing: extras.timing ?? song.lyrics_timing,
   };
 }
 
@@ -102,7 +104,7 @@ export async function listExplore(filter?: {
     ids.length
       ? admin
           .from("song_versions")
-          .select("song_id, audio_url, duration_sec, is_selected, idx")
+          .select("song_id, audio_url, duration_sec, is_selected, idx, lyrics_timing")
           .in("song_id", ids)
           .order("idx")
       : Promise.resolve({ data: [] }),
@@ -111,15 +113,23 @@ export async function listExplore(filter?: {
       : Promise.resolve({ data: [] }),
   ]);
 
-  const mediaBySong = new Map<string, { audio: string | null; dur: number | null }>();
+  const mediaBySong = new Map<
+    string,
+    { audio: string | null; dur: number | null; timing: LyricsTiming | null }
+  >();
   for (const v of (versions.data as {
     song_id: string;
     audio_url: string | null;
     duration_sec: number | null;
     is_selected: boolean;
+    lyrics_timing: LyricsTiming | null;
   }[]) ?? []) {
     if (!mediaBySong.has(v.song_id) || v.is_selected) {
-      mediaBySong.set(v.song_id, { audio: v.audio_url, dur: v.duration_sec });
+      mediaBySong.set(v.song_id, {
+        audio: v.audio_url,
+        dur: v.duration_sec,
+        timing: v.lyrics_timing,
+      });
     }
   }
   const profById = new Map(
@@ -135,6 +145,7 @@ export async function listExplore(filter?: {
       reactions: totals.get(String(r.id)) ?? 0,
       durationSec: media?.dur ?? null,
       audioUrl: media?.audio ?? null,
+      timing: media?.timing ?? null,
       creatorName: prof?.full_name ?? null,
       creatorHandle: prof?.handle ?? null,
     });
@@ -153,10 +164,15 @@ export async function getExploreSong(id: string): Promise<ExploreDetail | null> 
 
   const { data: version } = await admin
     .from("song_versions")
-    .select("audio_url, duration_sec")
+    .select("audio_url, duration_sec, lyrics_timing")
     .eq("song_id", id)
     .eq("is_selected", true)
     .maybeSingle();
+  const v = version as {
+    audio_url?: string;
+    duration_sec?: number | null;
+    lyrics_timing?: LyricsTiming | null;
+  } | null;
 
   const [summary, { data: prof }] = await Promise.all([
     reactionSummary(id),
@@ -167,13 +183,14 @@ export async function getExploreSong(id: string): Promise<ExploreDetail | null> 
   return {
     ...toItem(data as Record<string, unknown>, {
       reactions: summary.total,
-      durationSec: (version as { duration_sec?: number | null } | null)?.duration_sec ?? null,
+      durationSec: v?.duration_sec ?? null,
+      timing: v?.lyrics_timing ?? null,
       creatorName: p?.full_name ?? null,
       creatorHandle: p?.handle ?? null,
     }),
-    audioUrl: (version as { audio_url: string } | null)?.audio_url ?? null,
+    audioUrl: v?.audio_url ?? null,
     lyrics: s.lyrics,
-    timing: s.lyrics_timing,
+    timing: v?.lyrics_timing ?? s.lyrics_timing,
     mood: s.mood,
     voice: s.voice,
     language: s.language,

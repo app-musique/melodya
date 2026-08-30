@@ -2,15 +2,22 @@ import "server-only";
 import { nanoid } from "nanoid";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient as createServerClient } from "@/lib/supabase/server";
-import { getMusicProvider } from "@/lib/music";
+import { getMusicProvider, type MusicTrack } from "@/lib/music";
 import { generateLyrics } from "@/lib/lyrics";
-import { CURRENCY } from "@/lib/pricing";
+import { CURRENCY, songCreditCost } from "@/lib/pricing";
 import { getCreditsPerSong, grantCredits, spendCreditForSong } from "@/lib/credits";
 import { notify } from "@/lib/notifications";
 import { sendSongReadyEmail } from "@/lib/email";
 import { persistAudio, persistImage, storeCoverBuffer } from "@/lib/media";
 import { logError } from "@/lib/errors";
-import type { GiftReaction, Song, SongVersion, SongAsset } from "@/lib/domain";
+import type {
+  GiftReaction,
+  LyricsTiming,
+  Song,
+  SongJob,
+  SongVersion,
+  SongAsset,
+} from "@/lib/domain";
 import { env } from "@/lib/env";
 
 // ------------------------------------------------------------------
@@ -68,6 +75,9 @@ export async function listSongs(): Promise<Song[]> {
 export type SongListItem = Song & {
   audio_url: string | null;
   duration_sec: number | null;
+  /** Timing de la version écoutée (peut différer de song.lyrics_timing si 2 styles). */
+  version_timing: LyricsTiming | null;
+  version_style: string | null;
 };
 
 /** Comme listSongs, mais joint l'audio de la version choisie (pour l'écoute inline). */
@@ -85,31 +95,45 @@ export async function listSongsWithAudio(): Promise<SongListItem[]> {
   const songs = (data as Song[]) ?? [];
 
   const readyIds = songs.filter((s) => s.status === "ready").map((s) => s.id);
-  const audioById = new Map<string, { audio_url: string; duration_sec: number | null }>();
+  type Picked = {
+    audio_url: string;
+    duration_sec: number | null;
+    lyrics_timing: LyricsTiming | null;
+    music_style: string | null;
+  };
+  const audioById = new Map<string, Picked>();
   if (readyIds.length) {
     const { data: versions } = await supabase
       .from("song_versions")
-      .select("song_id, audio_url, duration_sec, is_selected, idx")
+      .select("song_id, audio_url, duration_sec, is_selected, idx, lyrics_timing, music_style")
       .in("song_id", readyIds)
       .order("idx");
-    for (const v of (versions as {
+    for (const v of (versions as ({
       song_id: string;
-      audio_url: string;
-      duration_sec: number | null;
       is_selected: boolean;
-    }[]) ?? []) {
+    } & Picked)[]) ?? []) {
       // 1re version par défaut, remplacée par celle marquée « choisie ».
       if (!audioById.has(v.song_id) || v.is_selected) {
-        audioById.set(v.song_id, { audio_url: v.audio_url, duration_sec: v.duration_sec });
+        audioById.set(v.song_id, {
+          audio_url: v.audio_url,
+          duration_sec: v.duration_sec,
+          lyrics_timing: v.lyrics_timing,
+          music_style: v.music_style,
+        });
       }
     }
   }
 
-  return songs.map((s) => ({
-    ...s,
-    audio_url: audioById.get(s.id)?.audio_url ?? null,
-    duration_sec: audioById.get(s.id)?.duration_sec ?? null,
-  }));
+  return songs.map((s) => {
+    const picked = audioById.get(s.id);
+    return {
+      ...s,
+      audio_url: picked?.audio_url ?? null,
+      duration_sec: picked?.duration_sec ?? null,
+      version_timing: picked?.lyrics_timing ?? null,
+      version_style: picked?.music_style ?? null,
+    };
+  });
 }
 
 export async function getSongBundle(id: string): Promise<{
@@ -266,7 +290,7 @@ export async function createSongFromCredits(songId: string): Promise<CreateResul
   if (s.status !== "draft") return { ok: true }; // déjà lancée
   if (!s.lyrics_approved) return { ok: false, reason: "not_ready" };
 
-  const cost = await getCreditsPerSong();
+  const cost = songCreditCost(await getCreditsPerSong(), s.music_style, s.music_style_b);
   const admin = createAdminClient();
 
   // Réserve la chanson (atomique) avant de dépenser, pour éviter le double débit.
@@ -323,18 +347,54 @@ export async function startGeneration(songId: string): Promise<void> {
         ? `${song.recipient_name.trim()} — ${song.occasion ?? "chanson"}`
         : song.occasion?.trim()) ||
       "Ma chanson Muzikii";
-    const { jobId } = await provider.createSong({
-      songId,
-      title,
-      lyrics,
-      style: song.music_style ?? "Afrobeat",
-      voice: song.voice ?? "femme",
-      mood: song.mood ?? "Émouvante",
-      language: song.language,
-    });
+
+    // 1 job = 2 versions du même style. Si l'utilisateur a choisi un style
+    // différent pour la version 2 → 2 jobs (un par style), 1 piste de chacun.
+    const styleA = (song.music_style ?? "Afrobeat").trim() || "Afrobeat";
+    const styleB = (song.music_style_b ?? "").trim();
+    const specs =
+      styleB && styleB.toLowerCase() !== styleA.toLowerCase()
+        ? [
+            { slot: 1, style: styleA },
+            { slot: 2, style: styleB },
+          ]
+        : [{ slot: 1, style: styleA }];
+
+    // Repart de zéro (relance éventuelle).
+    await admin.from("song_jobs").delete().eq("song_id", songId);
+
+    const createdJobIds: string[] = [];
+    for (const spec of specs) {
+      try {
+        const { jobId } = await provider.createSong({
+          songId,
+          title,
+          lyrics,
+          style: spec.style,
+          voice: song.voice ?? "femme",
+          mood: song.mood ?? "Émouvante",
+          language: song.language,
+        });
+        await admin.from("song_jobs").insert({
+          song_id: songId,
+          slot: spec.slot,
+          provider: provider.name,
+          provider_job_id: jobId,
+          style: spec.style,
+          status: "pending",
+        });
+        createdJobIds.push(jobId);
+      } catch (jobErr) {
+        // Le job 1 est indispensable → on remonte l'erreur (remboursement).
+        // Le job 2 en échec : on continue, la chanson aura une seule version.
+        if (spec.slot === 1) throw jobErr;
+        await logError("startGeneration.jobB", jobErr, { songId, style: spec.style });
+      }
+    }
+
     await admin
       .from("songs")
-      .update({ provider: provider.name, provider_job_id: jobId })
+      .update({ provider: provider.name, provider_job_id: createdJobIds[0] })
       .eq("id", songId);
   } catch (err) {
     // Échec avant même la création du job : on rembourse le crédit Muzikii
@@ -388,33 +448,136 @@ export async function advanceGeneration(songId: string): Promise<Song> {
   }
 
   const provider = getMusicProvider();
-  const result = await provider.getResult(song.provider_job_id);
 
-  if (result.status === "pending") return song;
+  const { data: jobsData } = await admin
+    .from("song_jobs")
+    .select("*")
+    .eq("song_id", songId)
+    .order("slot");
+  const jobs = (jobsData as SongJob[]) ?? [];
 
-  if (result.status === "failed") {
-    await logError("advanceGeneration.failed", new Error(result.error), {
+  // ---- Chemin historique : chansons lancées avant la migration 0018 ----
+  if (jobs.length === 0) {
+    const result = await provider.getResult(song.provider_job_id);
+    if (result.status === "pending") return song;
+    if (result.status === "failed") {
+      return failGeneration(admin, song, result.error);
+    }
+    return finalizeReady(
+      admin,
       songId,
-      provider_job_id: song.provider_job_id,
-    });
-    const { data: failed } = await admin
-      .from("songs")
-      .update({ status: "failed", error: result.error })
-      .eq("id", songId)
-      .select("*")
-      .single();
-    await notify(song.user_id, {
-      type: "song_failed",
-      title: "La création de ta chanson a échoué",
-      body: "Ouvre la chanson pour la relancer — aucun crédit n'est reperdu.",
-      link: `/mes-chansons/${songId}`,
-      dedupeKey: `song_failed:${songId}`,
-    });
-    return failed as Song;
+      result.tracks.slice(0, 4).map((t) => ({
+        url: t.url,
+        durationSec: t.durationSec,
+        providerAudioId: t.providerAudioId ?? null,
+        imageUrl: t.imageUrl ?? null,
+        providerJobId: song.provider_job_id,
+        style: song.music_style,
+      })),
+    );
   }
 
-  // ready — on « réclame » la transition de façon atomique pour éviter les
-  // insertions en double si deux polls arrivent en même temps.
+  // ---- Chemin multi-jobs : 1 job = 2 pistes même style ; 2 jobs = 1 piste chacun ----
+  const results = new Map<string, MusicTrack[]>();
+  for (const job of jobs) {
+    if (!job.provider_job_id || job.status === "failed") continue;
+    const r = await provider.getResult(job.provider_job_id);
+    if (r.status === "pending") continue;
+    if (r.status === "failed" || r.tracks.length === 0) {
+      job.status = "failed";
+      await admin
+        .from("song_jobs")
+        .update({ status: "failed", completed_at: new Date().toISOString() })
+        .eq("id", job.id);
+      await logError(
+        "advanceGeneration.jobFailed",
+        new Error(r.status === "failed" ? r.error : "aucune piste"),
+        { songId, slot: job.slot },
+      );
+      continue;
+    }
+    const wasReady = job.status === "ready";
+    job.status = "ready";
+    results.set(job.id, r.tracks);
+    if (!wasReady) {
+      await admin
+        .from("song_jobs")
+        .update({ status: "ready", completed_at: new Date().toISOString() })
+        .eq("id", job.id);
+    }
+  }
+
+  if (jobs.some((j) => j.status === "pending")) return song; // pas tous finis
+
+  const readyJobs = jobs.filter((j) => j.status === "ready" && results.has(j.id));
+  if (readyJobs.length === 0) {
+    return failGeneration(admin, song, "Aucune version n'a pu être générée");
+  }
+
+  // 1 seul job → on garde ses 2 pistes (même style). Sinon 1 piste par job.
+  const perJob = readyJobs.length === 1 ? 2 : 1;
+  const tracks: FinalizeTrack[] = [];
+  for (const job of readyJobs) {
+    for (const t of (results.get(job.id) ?? []).slice(0, perJob)) {
+      tracks.push({
+        url: t.url,
+        durationSec: t.durationSec,
+        providerAudioId: t.providerAudioId ?? null,
+        imageUrl: t.imageUrl ?? null,
+        providerJobId: job.provider_job_id,
+        style: job.style,
+      });
+    }
+  }
+
+  return finalizeReady(admin, songId, tracks.slice(0, 4));
+}
+
+type FinalizeTrack = {
+  url: string;
+  durationSec: number | null;
+  providerAudioId: string | null;
+  imageUrl: string | null;
+  providerJobId: string | null;
+  style: string | null;
+};
+
+/** Marque une génération en échec + notifie. */
+async function failGeneration(
+  admin: ReturnType<typeof createAdminClient>,
+  song: Song,
+  error: string,
+): Promise<Song> {
+  await logError("advanceGeneration.failed", new Error(error), {
+    songId: song.id,
+    provider_job_id: song.provider_job_id,
+  });
+  const { data: failed } = await admin
+    .from("songs")
+    .update({ status: "failed", error })
+    .eq("id", song.id)
+    .select("*")
+    .single();
+  await notify(song.user_id, {
+    type: "song_failed",
+    title: "La création de ta chanson a échoué",
+    body: "Ouvre la chanson pour la relancer — aucun crédit n'est reperdu.",
+    link: `/mes-chansons/${song.id}`,
+    dedupeKey: `song_failed:${song.id}`,
+  });
+  return failed as Song;
+}
+
+/**
+ * Passe la chanson « prête » : réclame la transition atomiquement, insère les
+ * versions (URLs fournisseur brutes, ré-hébergées ensuite par syncSongAssets),
+ * pochette, lien de partage, notif + email.
+ */
+async function finalizeReady(
+  admin: ReturnType<typeof createAdminClient>,
+  songId: string,
+  tracks: FinalizeTrack[],
+): Promise<Song> {
   const { data: claimed } = await admin
     .from("songs")
     .update({ status: "ready" })
@@ -424,15 +587,9 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     .maybeSingle();
 
   if (!claimed) {
-    // Un autre poll a déjà fini le travail.
     const { data: current } = await admin.from("songs").select("*").eq("id", songId).single();
     return current as Song;
   }
-
-  // Insertion RAPIDE : on stocke les URLs fournisseur brutes (jouables tout de
-  // suite, valides ~15 j chez Suno). Le ré-hébergement Storage + les timings de
-  // paroles se font ensuite en tâche de fond via syncSongAssets().
-  const tracks = result.tracks.slice(0, 4);
 
   await admin.from("song_versions").delete().eq("song_id", songId);
   await admin.from("song_versions").insert(
@@ -442,8 +599,10 @@ export async function advanceGeneration(songId: string): Promise<Song> {
       audio_url: t.url,
       duration_sec: t.durationSec,
       is_selected: i === 0,
-      provider_audio_id: t.providerAudioId ?? null,
-      image_url: t.imageUrl ?? null,
+      provider_audio_id: t.providerAudioId,
+      provider_job_id: t.providerJobId,
+      music_style: t.style,
+      image_url: t.imageUrl,
       persisted_at: null,
     })),
   );
@@ -455,12 +614,8 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     url: `${env.siteUrl}/api/cover/${songId}`,
   });
 
-  // Lien de partage actif par défaut dès que la chanson est prête (slug
-  // indevinable). L'utilisateur peut le repasser en privé depuis sa fiche.
   const ready = claimed as Song;
   const shareUpdate: Record<string, unknown> = { assets_synced_at: null };
-  // Pochette générée par Suno (URL brute, valable ~15 j) — ré-hébergée ensuite
-  // par syncSongAssets. On n'écrase jamais une pochette choisie par le créateur.
   if (!ready.cover_custom && tracks[0]?.imageUrl) {
     shareUpdate.cover_url = tracks[0].imageUrl;
   }
@@ -470,9 +625,8 @@ export async function advanceGeneration(songId: string): Promise<Song> {
   }
   await admin.from("songs").update(shareUpdate).eq("id", songId);
 
-  const s = claimed as Song;
-  const songLabel = s.title || s.recipient_name || "Ta chanson";
-  const createdNotif = await notify(s.user_id, {
+  const songLabel = ready.title || ready.recipient_name || "Ta chanson";
+  const createdNotif = await notify(ready.user_id, {
     type: "song_ready",
     title: "Ta chanson est prête 🎉",
     body: `${songLabel} — écoute les versions et choisis ta préférée.`,
@@ -480,15 +634,12 @@ export async function advanceGeneration(songId: string): Promise<Song> {
     dedupeKey: `song_ready:${songId}`,
   });
   if (createdNotif) {
-    await sendSongReadyEmail(s.user_id, {
-      recipientName: s.recipient_name ?? "",
-      title: s.title ?? undefined,
+    await sendSongReadyEmail(ready.user_id, {
+      recipientName: ready.recipient_name ?? "",
+      title: ready.title ?? undefined,
       songId,
     }).catch(() => {});
   }
-
-  // La récompense de parrainage est accordée au 1er ACHAT de crédits du filleul
-  // (déclenchée par grant_credits, cf. migration 0013) — pas ici.
 
   return claimed as Song;
 }
@@ -533,10 +684,11 @@ export async function syncSongAssets(songId: string): Promise<void> {
 
     const { data: after2 } = await admin
       .from("song_versions")
-      .select("persisted_at, provider_audio_id")
+      .select("*")
       .eq("song_id", songId)
       .order("idx");
-    const allPersisted = ((after2 as SongVersion[]) ?? []).every((r) => r.persisted_at);
+    const persisted = (after2 as SongVersion[]) ?? versions;
+    const allPersisted = persisted.every((r) => r.persisted_at);
 
     // 1b. ré-héberge la pochette générée par Suno (sauf si le créateur a choisi la sienne)
     if (!song.cover_custom && song.cover_url && !onOurStorage(song.cover_url)) {
@@ -546,23 +698,30 @@ export async function syncSongAssets(songId: string): Promise<void> {
       }
     }
 
-    // 2. timings de paroles réels (best-effort) quand l'audio est finalisé
+    // 2. timings de paroles réels, PAR version (les 2 versions peuvent avoir des
+    //    arrangements différents), quand l'audio est finalisé — best-effort.
     const provider = getMusicProvider();
-    let hasTimings = !!song.lyrics_timing;
-    if (allPersisted && !hasTimings && provider.getLineTimings && song.provider_job_id && song.lyrics) {
-      const audioId = (after2 as SongVersion[])?.[0]?.provider_audio_id;
-      if (audioId) {
+    if (allPersisted && provider.getLineTimings && song.lyrics) {
+      for (const v of persisted) {
+        if (v.lyrics_timing) continue;
+        const jobId = v.provider_job_id ?? song.provider_job_id;
+        if (!jobId || !v.provider_audio_id) continue;
         try {
-          const timings = await provider.getLineTimings(song.provider_job_id, audioId, song.lyrics);
+          const timings = await provider.getLineTimings(jobId, v.provider_audio_id, song.lyrics);
           if (timings && timings.length) {
-            await admin.from("songs").update({ lyrics_timing: timings }).eq("id", songId);
-            hasTimings = true;
+            await admin.from("song_versions").update({ lyrics_timing: timings }).eq("id", v.id);
+            v.lyrics_timing = timings;
+            // Compat : song.lyrics_timing = celui de la version 1.
+            if (v.idx === 1 && !song.lyrics_timing) {
+              await admin.from("songs").update({ lyrics_timing: timings }).eq("id", songId);
+            }
           }
         } catch (e) {
-          await logError("getLineTimings", e, { songId });
+          await logError("getLineTimings", e, { songId, versionId: v.id });
         }
       }
     }
+    const hasTimings = persisted.every((v) => v.lyrics_timing) || !!song.lyrics_timing;
 
     // 3. terminé — quand tout est ré-hébergé et (timings OK ou fournisseur muet ou trop vieux).
     // Garde-fou : au-delà de 15 min on clôt quand même (l'audio reste jouable sur

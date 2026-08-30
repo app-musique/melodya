@@ -19,6 +19,7 @@ export const stepDetails = z.object({
 
 export const stepStyle = z.object({
   music_style: z.enum(MUSIC_STYLES).or(z.string().trim().min(1).max(60)),
+  music_style_b: z.string().trim().max(60).optional().default(""),
   voice: z.enum(voiceIds),
   language: z.string().trim().min(2).max(10),
   mood: z.enum(MOODS).or(z.string().trim().min(1).max(60)),
@@ -40,6 +41,7 @@ export const songDraftPatch = z
     story: z.string().trim().max(4000),
     key_facts: z.string().trim().max(2000),
     music_style: z.string().trim().max(60),
+    music_style_b: z.string().trim().max(60),
     voice: z.enum(voiceIds),
     language: z.string().trim().max(10),
     mood: z.string().trim().max(60),

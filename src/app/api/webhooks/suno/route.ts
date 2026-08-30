@@ -22,11 +22,27 @@ export async function POST(req: Request) {
   if (!taskId) return json({ ok: true });
 
   const admin = createAdminClient();
-  const { data: song } = await admin
+  let { data: song } = await admin
     .from("songs")
     .select("id, status")
     .eq("provider_job_id", taskId)
     .maybeSingle();
+
+  // Génération à 2 styles : le job peut être celui de la version 2.
+  if (!song) {
+    const { data: job } = await admin
+      .from("song_jobs")
+      .select("song_id")
+      .eq("provider_job_id", taskId)
+      .maybeSingle();
+    if (job) {
+      ({ data: song } = await admin
+        .from("songs")
+        .select("id, status")
+        .eq("id", (job as { song_id: string }).song_id)
+        .maybeSingle());
+    }
+  }
 
   const s = song as { id: string; status: string } | null;
   if (s && (s.status === "generating" || s.status === "ready")) {

@@ -257,7 +257,12 @@ function VersionPicker({
             }`}
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold">Version {v.idx}</span>
+              <span className="text-sm font-semibold">
+                Version {v.idx}
+                {v.music_style && (
+                  <span className="ml-1.5 font-normal text-ink-soft">· {v.music_style}</span>
+                )}
+              </span>
               {v.is_selected ? (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-strong">
                   <Check className="size-3.5" />

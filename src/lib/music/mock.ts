@@ -11,11 +11,12 @@ export const mockMusicProvider: MusicProvider = {
 
   async createSong() {
     // Le timestamp de départ est encodé dans le jobId (provider stateless).
-    return { jobId: `mock_${Date.now()}` };
+    // Suffixe aléatoire : deux jobs lancés dans la même ms restent distincts.
+    return { jobId: `mock_${Date.now()}_${Math.random().toString(36).slice(2, 7)}` };
   },
 
   async getResult(jobId: string): Promise<MusicResult> {
-    const startedAt = Number(jobId.replace("mock_", ""));
+    const startedAt = Number(jobId.split("_")[1]);
     if (!Number.isFinite(startedAt)) {
       return { status: "failed", error: "jobId invalide" };
     }
