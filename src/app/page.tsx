@@ -8,6 +8,7 @@ import {
   QrCode,
   ShieldCheck,
   Sparkles,
+  Star,
   Users,
   Wand2,
 } from "lucide-react";
@@ -16,7 +17,7 @@ import { HeroFloaties } from "@/components/hero-floaties";
 import { Faq } from "@/components/faq";
 import { ExampleCard, type Example } from "@/components/example-card";
 import { Logo } from "@/components/logo";
-import { navLinks, occasions, orderHref, paymentMethods } from "@/lib/site";
+import { navLinks, occasions, orderHref, paymentMethods, site } from "@/lib/site";
 import { getCreditsPerSong, getPacks } from "@/lib/credits";
 import { formatXOF, pricePerSong } from "@/lib/pricing";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -111,6 +112,27 @@ const examples: Example[] = [
     tags: ["Réussite", "Diplôme"],
     from: "#1c5b4a",
     to: "#4fb98f",
+  },
+];
+
+const testimonials = [
+  {
+    quote:
+      "J'ai commandé pour l'entrée de mariage de ma sœur. Tout le monde a pleuré. Prête en une nuit.",
+    name: "Aminata D.",
+    role: "Mariage · Abidjan",
+  },
+  {
+    quote:
+      "Pour les 60 ans de mon père on a fait une chanson Rumba qui raconte sa vie. Le meilleur cadeau de la soirée.",
+    name: "Serge M.",
+    role: "Anniversaire · Kinshasa",
+  },
+  {
+    quote:
+      "Paiement Orange Money, texte modifié deux fois, voix d'enfant pour la fête des mères. Simple et vraiment émouvant.",
+    name: "Rita K.",
+    role: "Fête des mères · Lomé",
   },
 ];
 
@@ -379,6 +401,38 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* TESTIMONIALS */}
+        <section className="section-pad">
+          <div className="mx-auto max-w-6xl px-5">
+            <header className="max-w-2xl">
+              <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+                Ils ont marqué l&apos;occasion
+              </h2>
+            </header>
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {testimonials.map((t) => (
+                <figure
+                  key={t.name}
+                  className="flex flex-col rounded-3xl border border-line bg-white p-6 shadow-[var(--shadow-soft)]"
+                >
+                  <div className="flex gap-1 text-gold">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="size-4 fill-current" />
+                    ))}
+                  </div>
+                  <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-ink">
+                    “{t.quote}”
+                  </blockquote>
+                  <figcaption className="mt-5">
+                    <div className="font-semibold">{t.name}</div>
+                    <div className="text-xs text-brand-strong">{t.role}</div>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="section-pad pt-0">
           <div className="mx-auto max-w-6xl px-5">
@@ -444,8 +498,8 @@ export default async function Home() {
             <a href="/cgu" className="text-ink-soft hover:text-ink">
               Conditions d&apos;utilisation
             </a>
-            <a href="mailto:contact@muzikii.com" className="text-ink-soft hover:text-ink">
-              contact@muzikii.com
+            <a href={`mailto:${site.supportEmail}`} className="text-ink-soft hover:text-ink">
+              {site.supportEmail}
             </a>
           </div>
         </div>

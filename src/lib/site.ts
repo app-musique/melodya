@@ -1,6 +1,6 @@
 export const site = {
   name: "Muzikii",
-  supportEmail: "contact@muzikii.com",
+  supportEmail: "muzikii2026@gmail.com",
 };
 
 // Lien vers le tunnel de commande.
