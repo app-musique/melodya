@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function ConfidentialitePage() {
   return (
-    <LegalPage title="Politique de confidentialité" updated="29 août 2026">
+    <LegalPage title="Politique de confidentialité" updated="30 août 2026">
       <p>
         Cette politique explique quelles données Muzikii collecte, pourquoi, avec qui elles sont
         partagées et quels sont tes droits.
@@ -17,8 +17,9 @@ export default function ConfidentialitePage() {
 
       <h2>1. Responsable du traitement</h2>
       <p>
-        <strong>[Raison sociale à compléter]</strong>, [adresse]. Contact pour toute question
-        relative à tes données : <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>.
+        Le responsable du traitement est l&apos;éditeur du service <strong>Muzikii</strong>. Pour
+        toute question relative à tes données ou pour exercer tes droits, écris à{" "}
+        <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>.
       </p>
 
       <h2>2. Données collectées</h2>
@@ -27,7 +28,8 @@ export default function ConfidentialitePage() {
         <li><strong>Contenu de commande :</strong> occasion, prénom du destinataire, relation, l&apos;histoire et les anecdotes que tu saisis, style musical, voix, langue, et les paroles générées.</li>
         <li><strong>Paiement :</strong> le paiement est traité par Moneroo. Nous ne recevons ni ne stockons de numéro de carte ou de compte Mobile Money. Nous conservons le montant, la date, le statut et un identifiant de transaction.</li>
         <li><strong>Usage :</strong> chansons créées, réactions laissées sur les pages cadeau, notifications, dates d&apos;occasions que tu ajoutes, code et lien de parrainage.</li>
-        <li><strong>Données techniques :</strong> adresse IP, type de navigateur, journaux d&apos;erreurs, cookies strictement nécessaires.</li>
+        <li><strong>Données techniques :</strong> adresse IP (pays), type de navigateur, journaux d&apos;erreurs, cookies strictement nécessaires.</li>
+        <li><strong>Mesure publicitaire (si activée) :</strong> lorsque nous menons une campagne publicitaire, un outil de mesure de Meta (pixel Facebook et API Conversions) enregistre certains événements (visite d&apos;une page, début de commande, inscription, achat) afin d&apos;évaluer l&apos;efficacité des publicités. Ton adresse email est transmise à Meta sous forme <em>hachée</em> (non lisible) pour la correspondance ; le montant et le type d&apos;achat peuvent être transmis. Aucune donnée de contenu de chanson n&apos;est transmise.</li>
       </ul>
 
       <h2>3. Finalités et bases légales</h2>
@@ -48,6 +50,7 @@ export default function ConfidentialitePage() {
         <li><strong>Anthropic</strong> — génération des paroles : le brief que tu saisis (occasion, prénoms, histoire, style) lui est transmis pour produire le texte.</li>
         <li><strong>Fournisseur de génération musicale</strong> (sunoapi.org / Suno) — les paroles et le style lui sont transmis pour composer la musique.</li>
         <li><strong>Google</strong> — uniquement si tu choisis « Continuer avec Google ».</li>
+        <li><strong>Meta (Facebook)</strong> — uniquement lorsqu&apos;une campagne publicitaire est active : mesure des conversions via le pixel et l&apos;API Conversions (voir section 2).</li>
       </ul>
       <p>
         Certains de ces prestataires sont situés hors de ton pays, notamment aux États-Unis. Les
@@ -70,11 +73,16 @@ export default function ConfidentialitePage() {
         une réclamation auprès de l&apos;autorité de protection des données compétente de ton pays.
       </p>
 
-      <h2>7. Cookies</h2>
+      <h2>7. Cookies et traceurs</h2>
       <p>
-        Muzikii n&apos;utilise que des cookies strictement nécessaires : session de connexion,
-        mémorisation d&apos;un lien de parrainage, préférence d&apos;affichage. Aucun cookie
-        publicitaire ni traceur tiers à des fins de profilage.
+        Muzikii utilise des cookies strictement nécessaires : session de connexion, mémorisation
+        d&apos;un lien de parrainage, préférence d&apos;affichage.
+      </p>
+      <p>
+        Lorsqu&apos;une campagne publicitaire est active, le pixel Meta (Facebook) dépose également
+        un cookie de mesure publicitaire pour attribuer les conversions aux publicités. Il n&apos;est
+        pas utilisé pour t&apos;afficher de la publicité sur le site et reste inactif en dehors des
+        périodes de campagne.
       </p>
 
       <h2>8. Sécurité</h2>

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function CguPage() {
   return (
-    <LegalPage title="Conditions générales d'utilisation et de vente" updated="29 août 2026">
+    <LegalPage title="Conditions générales d'utilisation et de vente" updated="30 août 2026">
       <p>
         Les présentes conditions (les « Conditions ») régissent l&apos;accès et l&apos;utilisation
         du service Muzikii, accessible sur muzikii.com (le « Service »). En créant un compte ou en
@@ -18,9 +18,9 @@ export default function CguPage() {
 
       <h2>1. Éditeur</h2>
       <p>
-        Le Service est édité par <strong>[Raison sociale à compléter]</strong>, [forme juridique],
-        [n° d&apos;immatriculation / RCCM], dont le siège est situé [adresse]. Directeur de la
-        publication : [nom]. Contact : <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>.
+        Le Service est édité et exploité sous la marque <strong>Muzikii</strong>. Toute question,
+        réclamation ou demande relative au Service ou aux présentes Conditions peut être adressée à{" "}
+        <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>.
       </p>
 
       <h2>2. Description du Service</h2>
@@ -106,12 +106,12 @@ export default function CguPage() {
         <a href="/confidentialite">Politique de confidentialité</a>.
       </p>
 
-      <h2>12. Droit applicable</h2>
+      <h2>12. Droit applicable et litiges</h2>
       <p>
-        Les présentes Conditions sont soumises au droit [pays à compléter]. En cas de litige, une
-        solution amiable sera recherchée avant toute action ; à défaut, les tribunaux compétents
-        seront ceux du ressort du siège de l&apos;éditeur, sous réserve des règles protectrices du
-        consommateur.
+        En cas de litige, une solution amiable sera recherchée en priorité en écrivant à{" "}
+        <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>. À défaut d&apos;accord, le
+        litige sera porté devant les juridictions compétentes, sous réserve des règles impératives
+        protectrices du consommateur applicables dans ton pays de résidence.
       </p>
 
       <h2>13. Contact</h2>
