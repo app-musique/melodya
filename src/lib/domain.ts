@@ -152,7 +152,8 @@ export type Profile = {
 export type LoyaltyTier = {
   id: string;
   name: string;
-  min_songs: number;
+  /** Seuil : total de crédits achetés pour atteindre ce palier. */
+  min_credits: number;
   discount_pct: number;
   sort_order: number;
 };

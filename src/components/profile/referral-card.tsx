@@ -32,8 +32,8 @@ export function ReferralCard({
         Parraine tes proches
       </div>
       <p className="mt-1 text-sm text-ink-soft">
-        Ils reçoivent des crédits en s&apos;inscrivant, tu es récompensé·e à leur première
-        chanson.
+        Partage ton lien : dès qu&apos;un filleul achète son premier pack de crédits, tu es
+        récompensé·e en crédits.
       </p>
 
       <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-cream-deep p-3">

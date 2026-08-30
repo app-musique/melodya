@@ -49,6 +49,11 @@ export async function POST(req: Request) {
   const paymentId = (payment as { id: string }).id;
   const returnUrl = `${env.siteUrl}/credits?paid=1${next ? `&next=${encodeURIComponent(next)}` : ""}`;
 
+  // Pays de l'acheteur (géo-IP Vercel) → pré-sélectionne le pays sur la page
+  // de paiement Moneroo. Absent en local / si non déterminé.
+  const ipCountry = (req.headers.get("x-vercel-ip-country") ?? "").toUpperCase();
+  const country = /^[A-Z]{2}$/.test(ipCountry) ? ipCountry : undefined;
+
   let init;
   try {
     init = await initializePayment({
@@ -58,6 +63,7 @@ export async function POST(req: Request) {
       description: `Muzikii — pack ${pack.name} (${pack.credits} crédits)`,
       returnUrl,
       customer: { email: user!.email ?? "client@muzikii.com" },
+      country,
     });
   } catch (err) {
     return apiError(`Initialisation du paiement impossible : ${(err as Error).message}`, 502);

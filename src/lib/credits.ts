@@ -30,14 +30,10 @@ export async function getSettings(): Promise<{
 }
 
 export async function getReferralSettings(): Promise<{
-  referral_referee_bonus: number;
   referral_referrer_reward: number;
 }> {
-  const [referee, referrer] = await Promise.all([
-    getSetting("referral_referee_bonus", 1),
-    getSetting("referral_referrer_reward", 2),
-  ]);
-  return { referral_referee_bonus: referee, referral_referrer_reward: referrer };
+  const referrer = await getSetting("referral_referrer_reward", 2);
+  return { referral_referrer_reward: referrer };
 }
 
 /** Packs actifs, triés — pour la boutique et la landing. */

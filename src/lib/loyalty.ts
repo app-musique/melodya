@@ -3,10 +3,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { LoyaltyTier } from "@/lib/domain";
 
 export type UserLoyalty = {
-  songCount: number;
+  /** Total de crédits achetés (mouvements « purchase »). */
+  creditsPurchased: number;
   tier: LoyaltyTier | null;
   nextTier: LoyaltyTier | null;
-  songsToNext: number;
+  creditsToNext: number;
   discountPct: number;
 };
 
@@ -15,32 +16,35 @@ export async function getTiers(): Promise<LoyaltyTier[]> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("loyalty_tiers")
-    .select("id,name,min_songs,discount_pct,sort_order")
-    .order("min_songs", { ascending: true });
+    .select("id,name,min_credits,discount_pct,sort_order")
+    .order("min_credits", { ascending: true });
   return (data as LoyaltyTier[]) ?? [];
 }
 
-/** Nombre de chansons réellement lancées (hors brouillons). */
-export async function countCreatedSongs(userId: string): Promise<number> {
+/** Total de crédits achetés par l'utilisateur (recharges abouties). */
+export async function countPurchasedCredits(userId: string): Promise<number> {
   const admin = createAdminClient();
-  const { count } = await admin
-    .from("songs")
-    .select("id", { count: "exact", head: true })
+  const { data } = await admin
+    .from("credit_transactions")
+    .select("amount")
     .eq("user_id", userId)
-    .neq("status", "draft");
-  return count ?? 0;
+    .eq("reason", "purchase");
+  return ((data as { amount: number }[]) ?? []).reduce((s, r) => s + Math.max(0, r.amount), 0);
 }
 
 export async function getUserLoyalty(userId: string): Promise<UserLoyalty> {
-  const [tiers, songCount] = await Promise.all([getTiers(), countCreatedSongs(userId)]);
-  const reached = tiers.filter((t) => songCount >= t.min_songs);
+  const [tiers, creditsPurchased] = await Promise.all([
+    getTiers(),
+    countPurchasedCredits(userId),
+  ]);
+  const reached = tiers.filter((t) => creditsPurchased >= t.min_credits);
   const tier = reached.length ? reached[reached.length - 1] : (tiers[0] ?? null);
-  const nextTier = tiers.find((t) => t.min_songs > songCount) ?? null;
+  const nextTier = tiers.find((t) => t.min_credits > creditsPurchased) ?? null;
   return {
-    songCount,
+    creditsPurchased,
     tier,
     nextTier,
-    songsToNext: nextTier ? Math.max(0, nextTier.min_songs - songCount) : 0,
+    creditsToNext: nextTier ? Math.max(0, nextTier.min_credits - creditsPurchased) : 0,
     discountPct: tier?.discount_pct ?? 0,
   };
 }
