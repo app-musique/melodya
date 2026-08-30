@@ -83,12 +83,15 @@ export default async function CreditsPage({ searchParams }: Props) {
               −{loyalty.discountPct}% appliqué sur tous les packs ci-dessous.
             </span>
           ) : (
-            <span className="text-ink-soft">Crée des chansons pour débloquer des remises.</span>
+            <span className="text-ink-soft">
+              Recharge des crédits pour débloquer des remises.
+            </span>
           )}
           {loyalty.nextTier && (
             <span className="text-ink-soft">
-              Encore {loyalty.songsToNext} chanson{loyalty.songsToNext > 1 ? "s" : ""} pour{" "}
-              {loyalty.nextTier.name} (−{loyalty.nextTier.discount_pct}%).
+              Encore {loyalty.creditsToNext} crédit{loyalty.creditsToNext > 1 ? "s" : ""} acheté
+              {loyalty.creditsToNext > 1 ? "s" : ""} pour {loyalty.nextTier.name} (−
+              {loyalty.nextTier.discount_pct}%).
             </span>
           )}
         </div>

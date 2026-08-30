@@ -41,8 +41,8 @@ export default async function ProfilPage() {
       ? Math.min(
           100,
           Math.round(
-            ((loyalty.songCount - loyalty.tier.min_songs) /
-              Math.max(1, loyalty.nextTier.min_songs - loyalty.tier.min_songs)) *
+            ((loyalty.creditsPurchased - loyalty.tier.min_credits) /
+              Math.max(1, loyalty.nextTier.min_credits - loyalty.tier.min_credits)) *
               100,
           ),
         )
@@ -137,9 +137,9 @@ export default async function ProfilPage() {
             </div>
             <p className="mt-2 text-xs text-ink-soft">
               {loyalty.nextTier
-                ? `Encore ${loyalty.songsToNext} chanson${
-                    loyalty.songsToNext > 1 ? "s" : ""
-                  } pour ${loyalty.nextTier.name} (−${loyalty.nextTier.discount_pct}%)`
+                ? `Encore ${loyalty.creditsToNext} crédit${
+                    loyalty.creditsToNext > 1 ? "s" : ""
+                  } acheté${loyalty.creditsToNext > 1 ? "s" : ""} pour ${loyalty.nextTier.name} (−${loyalty.nextTier.discount_pct}%)`
                 : "Palier maximum atteint 🎉"}
             </p>
           </div>

@@ -36,7 +36,7 @@ export function LoyaltyEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: t.name,
-          min_songs: t.min_songs,
+          min_credits: t.min_credits,
           discount_pct: t.discount_pct,
           sort_order: t.sort_order,
         }),
@@ -60,7 +60,7 @@ export function LoyaltyEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: "Nouveau palier",
-          min_songs: 0,
+          min_credits: 0,
           discount_pct: 0,
           sort_order: tiers.length + 1,
         }),
@@ -113,7 +113,7 @@ export function LoyaltyEditor({
     <div className="space-y-8">
       <p className="rounded-xl bg-brand/10 px-4 py-3 text-sm text-brand-strong">
         La remise du palier atteint est appliquée <strong>automatiquement</strong> au paiement
-        des packs et affichée sur la page crédits. Le palier dépend du nombre de chansons créées.
+        des packs et affichée sur la page crédits. Le palier dépend du total de crédits achetés.
       </p>
 
       {error && (
@@ -187,13 +187,13 @@ export function LoyaltyEditor({
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-ink-soft">
-                    Dès (chansons)
+                    Dès (crédits achetés)
                   </span>
                   <input
                     type="number"
                     min={0}
-                    value={t.min_songs}
-                    onChange={(e) => patch(t.id, "min_songs", Number(e.target.value))}
+                    value={t.min_credits}
+                    onChange={(e) => patch(t.id, "min_credits", Number(e.target.value))}
                     className="w-full rounded-lg border border-line px-3 py-2 text-sm"
                   />
                 </label>

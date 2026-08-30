@@ -23,7 +23,7 @@ export async function PATCH(req: Request, { params }: Params) {
     .from("loyalty_tiers")
     .update(parsed.data)
     .eq("id", id)
-    .select("id,name,min_songs,discount_pct,sort_order")
+    .select("id,name,min_credits,discount_pct,sort_order")
     .single();
   if (error) return apiError(error.message, 500);
 

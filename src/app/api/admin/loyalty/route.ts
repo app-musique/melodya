@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const { data, error } = await admin
     .from("loyalty_tiers")
     .insert(parsed.data)
-    .select("id,name,min_songs,discount_pct,sort_order")
+    .select("id,name,min_credits,discount_pct,sort_order")
     .single();
   if (error) return apiError(error.message, 500);
 

@@ -89,7 +89,7 @@ export const adminSettingsSchema = z.object({
 
 export const adminLoyaltyTierSchema = z.object({
   name: z.string().trim().min(1).max(40),
-  min_songs: z.number().int().min(0).max(10_000),
+  min_credits: z.number().int().min(0).max(100_000),
   discount_pct: z.number().int().min(0).max(90),
   sort_order: z.number().int().min(0).max(999),
 });
