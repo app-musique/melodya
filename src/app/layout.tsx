@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
+import { FacebookPixel } from "@/components/analytics/facebook-pixel";
 import { env } from "@/lib/env";
 import "./globals.css";
 
@@ -45,7 +46,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className={`${inter.variable} ${sora.variable} h-full`}>
-      <body className="min-h-full flex flex-col overflow-x-hidden">{children}</body>
+      <body className="min-h-full flex flex-col overflow-x-hidden">
+        {env.facebookPixelId && <FacebookPixel pixelId={env.facebookPixelId} />}
+        {children}
+      </body>
     </html>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
+import { fbqTrack } from "@/components/analytics/facebook-pixel";
 import { discountedPrice, formatXOF, pricePerSong } from "@/lib/pricing";
 import type { CreditPack } from "@/lib/domain";
 
@@ -26,6 +27,15 @@ export function PackPicker({
     if (!selected) return;
     setBusy(true);
     setError(null);
+    const pack = packs.find((p) => p.id === selected);
+    if (pack) {
+      fbqTrack("InitiateCheckout", {
+        value: discountedPrice(pack.price, discountPct),
+        currency: "XOF",
+        content_name: pack.name,
+        num_items: pack.credits,
+      });
+    }
     try {
       const res = await fetch("/api/credits/checkout", {
         method: "POST",
