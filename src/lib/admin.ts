@@ -356,3 +356,64 @@ export async function listCreditGrants(limit = 30): Promise<CreditGrantRow[]> {
     balance_after: r.balance_after,
   }));
 }
+
+// ------------------------------------------------------------------
+// Statistiques de fréquentation (visiteurs / pages vues)
+// ------------------------------------------------------------------
+
+export type VisitBucketRow = { bucket: string; visitors: number; pageviews: number };
+
+export type VisitStats = {
+  totals: { visitors: number; pageviews: number };
+  buckets: VisitBucketRow[];
+  granularity: "hour" | "day";
+};
+
+/**
+ * Statistiques de visites sur [start, end). Granularité automatique : par
+ * heure pour une plage <= 36h (typiquement « aujourd'hui »), par jour sinon.
+ * Les tranches sans donnée sont renvoyées à 0 (pas de trou dans le graphe).
+ */
+export async function getVisitStats(start: Date, end: Date): Promise<VisitStats> {
+  const admin = createAdminClient();
+  const granularity: "hour" | "day" = end.getTime() - start.getTime() <= 36 * 3_600_000 ? "hour" : "day";
+
+  const [{ data: totalsData }, { data: bucketsData }] = await Promise.all([
+    admin.rpc("get_visit_totals", { p_start: start.toISOString(), p_end: end.toISOString() }),
+    admin.rpc("get_visit_stats", {
+      p_start: start.toISOString(),
+      p_end: end.toISOString(),
+      p_bucket: granularity,
+    }),
+  ]);
+
+  const totalsRow = (totalsData as { visitors: number | string; pageviews: number | string }[] | null)?.[0];
+  const rows =
+    (bucketsData as { bucket: string; visitors: number | string; pageviews: number | string }[]) ?? [];
+  const byBucket = new Map(rows.map((r) => [new Date(r.bucket).getTime(), r]));
+
+  const stepMs = granularity === "hour" ? 3_600_000 : 86_400_000;
+  const first =
+    granularity === "hour"
+      ? Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate(), start.getUTCHours())
+      : Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
+
+  const buckets: VisitBucketRow[] = [];
+  for (let t = first; t < end.getTime(); t += stepMs) {
+    const row = byBucket.get(t);
+    buckets.push({
+      bucket: new Date(t).toISOString(),
+      visitors: Number(row?.visitors ?? 0),
+      pageviews: Number(row?.pageviews ?? 0),
+    });
+  }
+
+  return {
+    totals: {
+      visitors: Number(totalsRow?.visitors ?? 0),
+      pageviews: Number(totalsRow?.pageviews ?? 0),
+    },
+    buckets,
+    granularity,
+  };
+}

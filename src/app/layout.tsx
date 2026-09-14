@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
 import { FacebookPixel } from "@/components/analytics/facebook-pixel";
+import { VisitTracker } from "@/components/analytics/visit-tracker";
 import { getFacebookConfig } from "@/lib/integrations";
 import { env } from "@/lib/env";
 import "./globals.css";
@@ -50,6 +51,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="fr" className={`${inter.variable} ${sora.variable} h-full`}>
       <body className="min-h-full flex flex-col overflow-x-hidden">
         {pixelId && <FacebookPixel pixelId={pixelId} />}
+        <VisitTracker />
         {children}
       </body>
     </html>
